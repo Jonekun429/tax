@@ -1,915 +1,947 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>確定申告ダッシュボード＆シミュレーター</title>
-    <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons (CDN) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        blob: "blob 7s infinite",
-                        fadeIn: "fadeIn 0.4s ease-out forwards",
-                        zoomIn: "zoomIn 0.2s ease-out forwards"
-                    },
-                    keyframes: {
-                        blob: {
-                            "0%": { transform: "translate(0px, 0px) scale(1)" },
-                            "33%": { transform: "translate(30px, -50px) scale(1.1)" },
-                            "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
-                            "100%": { transform: "translate(0px, 0px) scale(1)" },
-                        },
-                        fadeIn: {
-                            "0%": { opacity: 0, transform: "translateY(10px)" },
-                            "100%": { opacity: 1, transform: "translateY(0)" }
-                        },
-                        zoomIn: {
-                            "0%": { opacity: 0, transform: "scale(0.95)" },
-                            "100%": { opacity: 1, transform: "scale(1)" }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        .zoom-in { animation: zoomIn 0.2s ease-out forwards; }
-        /* スライダーのスタイル微調整 */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: transparent;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px; width: 16px;
-            border-radius: 50%;
-            background: currentColor;
-            cursor: pointer;
-            margin-top: -4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 8px;
-            cursor: pointer;
-            border-radius: 4px;
-            background: #e2e8f0; /* slate-200 */
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>確定申告ナビ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p:#005D4D;--pd:#004038;--pm:#006B59;
+  --pl:#E6F4F1;--pp:#F0F9F7;--pt:#CCE9E3;
+  --bg:#F4F8F7;--sur:#fff;--bdr:#D8EAE6;--bdrS:#B0D4CC;
+  --tx:#0D1F1B;--txs:#4A6B64;--txh:#8AADA6;
+  --gn:#12A876;--gnl:#E6F7F1;
+  --rd:#D94444;--rdl:#FDF0F0;
+  --am:#D97706;--aml:#FEF3CD;
+  --bl:#1E6BB0;--bll:#E8F1FA;
+  --mono:'DM Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+  --r:12px;--rl:18px;
+  --sh:0 1px 3px rgba(0,93,77,.08);
+  --shm:0 6px 20px rgba(0,93,77,.14);
+  --tr:.16s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.65}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select{font-family:inherit}
+
+/* LAYOUT */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:224px;flex-shrink:0;background:var(--pd);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform var(--tr)}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sb-mark{width:38px;height:38px;border-radius:11px;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--pd);flex-shrink:0}
+.sb-txt{color:#fff;font-size:13px;font-weight:700;line-height:1.3}
+.sb-txt span{display:block;font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px}
+.sb-sec{padding:10px 10px 0}
+.sb-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:0 8px;margin-bottom:3px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:9px;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;transition:all var(--tr);margin-bottom:2px;width:100%;text-align:left}
+.sb-item:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85)}
+.sb-item.active{background:var(--pl);color:var(--pd);font-weight:700}
+.sb-item .ico{font-size:15px;width:20px;text-align:center}
+.sb-bdg{margin-left:auto;background:var(--pl);color:var(--pd);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:var(--mono)}
+.sb-priv{margin-top:auto;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.15)}
+.sb-priv-inner{background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1)}
+.sb-priv-ttl{font-size:10px;font-weight:700;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.sb-priv-txt{font-size:10px;color:rgba(255,255,255,.4);line-height:1.6}
+
+.main{margin-left:224px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-l{display:flex;align-items:center;gap:12px}
+.menu-btn{display:none;width:34px;height:34px;border-radius:8px;background:var(--pl);color:var(--p);align-items:center;justify-content:center;font-size:16px}
+.topbar-ttl{font-size:15px;font-weight:700}
+.topbar-r{display:flex;align-items:center;gap:8px}
+.priv-chip{display:flex;align-items:center;gap:5px;background:var(--gnl);border:1px solid var(--pt);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;color:var(--p)}
+.btn-add{padding:8px 16px;border-radius:8px;background:var(--p);color:#fff;font-size:12px;font-weight:700;transition:background var(--tr)}
+.btn-add:hover{background:var(--pm)}
+.content{padding:26px 28px;flex:1;max-width:1100px}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ph{margin-bottom:22px}
+.ph h1{font-size:21px;font-weight:900;letter-spacing:-.02em}
+.ph p{color:var(--txs);font-size:13px;margin-top:3px}
+
+/* CARD */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);box-shadow:var(--sh);overflow:hidden}
+.ch{padding:14px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--pp)}
+.ch h3{font-size:13px;font-weight:700;color:var(--pd)}
+.cb{padding:20px}
+
+/* KPI */
+.kg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kc{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);cursor:pointer;transition:all var(--tr);position:relative;overflow:hidden;border-top:3px solid var(--cc,var(--p))}
+.kc:hover{box-shadow:var(--shm);transform:translateY(-2px)}
+.kl{font-size:11px;color:var(--txs);font-weight:500;margin-bottom:5px}
+.kv{font-size:20px;font-weight:900;font-family:var(--mono);letter-spacing:-.02em;margin-bottom:6px}
+.kd{font-size:11px;display:flex;align-items:center;gap:3px}
+.kd.up{color:var(--gn)}.kd.dn{color:var(--rd)}.kd.fl{color:var(--txh)}
+.kf{font-size:10px;color:var(--txh);margin-top:2px;font-family:var(--mono)}
+
+/* BAR */
+.bstack{height:32px;border-radius:8px;overflow:hidden;display:flex;background:var(--bg)}
+.bseg{height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:width .4s cubic-bezier(.4,0,.2,1);overflow:hidden;white-space:nowrap}
+.bleg{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.bleg-i{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txs)}
+.bdot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* TABLE */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--txs);padding:8px 12px;border-bottom:1px solid var(--bdr);background:var(--pp)}
+.dt td{padding:10px 12px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--pp)}
+.nm{text-align:right;font-family:var(--mono);font-weight:600}
+.rb{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:var(--bg);font-size:10px;font-weight:700;color:var(--txs)}
+.rb.r1{background:#FFD700;color:#705200}.rb.r2{background:#C0C0C0;color:#444}.rb.r3{background:#C87A3A;color:#fff}
+.pb{height:5px;background:var(--bdr);border-radius:3px;margin-top:3px;overflow:hidden}
+.pf{height:100%;border-radius:3px;transition:width .5s ease}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* YEAR TABS */
+.ytabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.ytab{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--bdr);background:var(--sur);color:var(--txs);cursor:pointer;transition:all var(--tr)}
+.ytab:hover{border-color:var(--p);color:var(--p)}
+.ytab.active{background:var(--p);color:#fff;border-color:var(--p)}
+
+/* SIMULATOR */
+.sg{display:grid;grid-template-columns:420px 1fr;gap:20px}
+.rhero{background:linear-gradient(140deg,var(--pd) 0%,var(--p) 100%);border-radius:var(--rl);padding:26px 28px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--shm)}
+.rhero::before{content:'¥';position:absolute;right:-8px;top:-18px;font-size:130px;font-weight:900;opacity:.06;font-family:var(--mono);pointer-events:none;line-height:1}
+.hl{font-size:11px;opacity:.6;margin-bottom:4px}
+.ha{font-size:38px;font-weight:900;font-family:var(--mono);letter-spacing:-.03em;color:#7FFFD4}
+.hsub{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
+.hsl{font-size:10px;opacity:.5}
+.hsv{font-size:15px;font-weight:700;font-family:var(--mono)}
+
+.slb{margin-bottom:16px}
+.slh{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.sln{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.snw{display:flex;align-items:center;gap:4px}
+.snum{width:116px;text-align:right;border:1px solid var(--bdr);border-radius:7px;padding:5px 8px;font-size:13px;font-weight:700;font-family:var(--mono);color:var(--tx);transition:border-color var(--tr);background:var(--sur)}
+.snum:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px var(--pl)}
+.su{font-size:11px;color:var(--txs)}
+.shint{font-size:11px;color:var(--txh);margin-top:3px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:var(--bdr);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--p);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,93,77,.35);cursor:pointer;transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type=range].am::-webkit-slider-thumb{background:var(--am);box-shadow:0 1px 4px rgba(217,119,6,.35)}
+input[type=range].bl::-webkit-slider-thumb{background:var(--bl);box-shadow:0 1px 4px rgba(30,107,176,.35)}
+input[type=range].rd::-webkit-slider-thumb{background:var(--rd);box-shadow:0 1px 4px rgba(217,68,68,.35)}
+
+.bdr-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:8px;background:var(--pp);margin-bottom:5px;font-size:13px}
+.bdr-row.hl2{background:var(--pt)}
+.bdr-row .bl2{color:var(--txs)}
+.bdr-row.hl2 .bl2{color:var(--pd);font-weight:700}
+.bdr-row .bv{font-weight:700;font-family:var(--mono)}
+.bdr-row.hl2 .bv{color:var(--pd);font-size:15px}
+.dl{display:flex;justify-content:space-between;padding:5px 12px 5px 22px;font-size:11px;color:var(--txh);border-left:2px solid var(--bdr);margin-left:8px;margin-bottom:2px}
+.dl .dln{font-weight:600;color:var(--txs)}
+
+/* Formula */
+.fb{background:var(--pp);border:1px solid var(--pt);border-radius:10px;padding:14px 16px;margin-top:12px;font-size:12px}
+.fb h4{font-size:11px;font-weight:700;color:var(--p);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.fr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bdr)}
+.fr:last-child{border-bottom:none;font-weight:700;color:var(--pd)}
+.frl{color:var(--txs);font-size:11px}.frv{font-family:var(--mono);font-size:11px;font-weight:600}
+.rate-bdg{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono);background:var(--pl);color:var(--pd)}
+.stip{background:var(--aml);border:1px solid #F0C060;border-radius:10px;padding:12px 14px;font-size:12px;color:#7A4F00;margin-top:12px;display:flex;gap:8px;align-items:flex-start}
+.tico{font-size:15px;flex-shrink:0}
+
+/* DEDUCTION GUIDE */
+.dc{margin-bottom:22px}
+.dcttl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--p);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--pt)}
+.dg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.di{border:1px solid var(--bdr);border-radius:11px;padding:12px 14px;background:var(--sur);cursor:pointer;transition:all var(--tr);position:relative}
+.di:hover{border-color:var(--p);background:var(--pp)}
+.di.apl{border-color:var(--gn);background:var(--gnl)}
+.di.auto{border-color:var(--bdrS);background:var(--pp);cursor:default;opacity:.8}
+.dn2{font-size:13px;font-weight:700;margin-bottom:3px}
+.dm{font-size:11px;color:var(--txs);font-family:var(--mono);margin-bottom:4px}
+.dd{font-size:11px;color:var(--txs);line-height:1.55}
+.dbdg{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px}
+.dbdg.auto{background:var(--pl);color:var(--pd)}
+.dbdg.apl{background:var(--gnl);color:var(--gn)}
+.dbdg.pop{background:var(--pt);color:var(--pd)}
+
+/* DATA MANAGE */
+.uz{border:2px dashed var(--bdrS);border-radius:var(--rl);padding:44px 28px;text-align:center;cursor:pointer;background:var(--sur);transition:all var(--tr)}
+.uz:hover,.uz.ov{border-color:var(--p);background:var(--pp)}
+.uico{font-size:44px;margin-bottom:12px}
+.uz h3{font-size:15px;font-weight:700;margin-bottom:5px}
+.uz p{font-size:12px;color:var(--txs)}
+.dr{display:flex;align-items:center;padding:12px 18px;border-bottom:1px solid var(--bdr);gap:12px;transition:background var(--tr)}
+.dr:last-child{border-bottom:none}
+.dr:hover{background:var(--pp)}
+.dry{font-size:17px;font-weight:900;font-family:var(--mono);width:52px;color:var(--pd)}
+.drst{flex:1;display:flex;gap:18px}
+.drs .drsl{font-size:10px;color:var(--txh)}
+.drs .drsv{font-size:13px;font-weight:700;font-family:var(--mono)}
+.dra{display:flex;gap:6px}
+.bxs{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--bdr);background:var(--sur);color:var(--txs);cursor:pointer;transition:all var(--tr)}
+.bxs:hover{border-color:var(--p);color:var(--p);background:var(--pp)}
+.bxs.danger:hover{border-color:var(--rd);color:var(--rd);background:var(--rdl)}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;border:1px solid transparent;cursor:pointer;transition:all var(--tr);display:inline-flex;align-items:center;gap:6px}
+.bp{background:var(--p);color:#fff}.bp:hover{background:var(--pm)}
+.bo{background:var(--sur);color:var(--tx);border-color:var(--bdr)}.bo:hover{border-color:var(--p);color:var(--p)}
+.bg{background:none;color:var(--txs)}.bg:hover{background:var(--pp);color:var(--tx)}
+
+/* MODAL */
+.ov2{position:fixed;inset:0;background:rgba(0,40,30,.5);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s}
+.ov2.open{opacity:1;pointer-events:all}
+.mb{background:var(--sur);border-radius:var(--rl);width:100%;max-width:520px;max-height:86vh;overflow:hidden;box-shadow:0 24px 60px rgba(0,30,20,.22);transform:scale(.96);transition:transform .2s}
+.ov2.open .mb{transform:scale(1)}
+.mh{padding:18px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--pp)}
+.mh h3{font-size:15px;font-weight:700}
+.mc{width:30px;height:30px;border-radius:7px;background:var(--bg);color:var(--txs);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:1px solid var(--bdr);transition:all var(--tr)}
+.mc:hover{background:var(--rdl);color:var(--rd);border-color:var(--rd)}
+.mbdy{padding:22px;overflow-y:auto;max-height:calc(86vh - 60px)}
+
+/* FORM */
+.fg{margin-bottom:13px}
+.fl{font-size:11px;font-weight:700;color:var(--txs);margin-bottom:4px;display:block;letter-spacing:.03em}
+.fi{width:100%;border:1px solid var(--bdr);border-radius:8px;padding:8px 11px;font-size:13px;background:var(--sur);transition:border-color var(--tr)}
+.fi:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px var(--pl)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drow{display:grid;grid-template-columns:1fr 130px 22px;gap:6px;align-items:center;margin-bottom:5px}
+.drm{background:none;border:none;cursor:pointer;color:var(--txh);font-size:15px;transition:color var(--tr)}
+.drm:hover{color:var(--rd)}
+
+/* ALERTS TAGS */
+.al{padding:11px 13px;border-radius:9px;font-size:12px;line-height:1.65;display:flex;align-items:flex-start;gap:9px;border:1px solid}
+.ai{background:var(--pp);border-color:var(--pt);color:var(--pd)}
+.as{background:var(--gnl);border-color:#A7E3CB;color:#064E35}
+.aw{background:var(--aml);border-color:#F0C060;color:#7A4F00}
+.aico{font-size:15px;flex-shrink:0;margin-top:1px}
+.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700}
+.tg{background:var(--gnl);color:var(--gn)}.tr{background:var(--rdl);color:var(--rd)}
+.ta{background:var(--aml);color:var(--am)}.tb{background:var(--pl);color:var(--pd)}
+
+.es{text-align:center;padding:60px 20px;color:var(--txs)}
+.es .ei{font-size:52px;margin-bottom:12px}
+.es h3{font-size:16px;font-weight:700;margin-bottom:5px;color:var(--tx)}
+.es p{font-size:13px}
+
+/* GUIDE */
+.gs{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.gsn{width:30px;height:30px;border-radius:50%;flex-shrink:0;background:var(--p);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}
+.gst{font-size:14px;font-weight:700;margin-bottom:3px}
+.gsd{font-size:12px;color:var(--txs);line-height:1.6}
+
+/* TOGGLE */
+.tgw{display:flex;align-items:center;gap:10px}
+.tg2{width:42px;height:23px;border-radius:12px;background:var(--bdr);position:relative;cursor:pointer;transition:background .2s}
+.tg2.on{background:var(--p)}
+.tgk{position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.tg2.on .tgk{transform:translateX(19px)}
+
+/* COMPARE BARS */
+.cmr{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.cml{width:48px;font-size:10px;color:var(--txs);text-align:right;font-family:var(--mono);font-weight:700}
+.cmbw{flex:1;height:18px;background:var(--bg);border-radius:4px;overflow:hidden}
+.cmb{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 6px;transition:width .5s ease}
+.cmb span{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+.cmv{width:70px;font-size:11px;font-weight:700;font-family:var(--mono);text-align:right}
+
+.spn{width:38px;height:38px;border-radius:50%;border:3px solid var(--bdr);border-top-color:var(--p);animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--bdrS);border-radius:3px}
+
+.sbo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199}
+.sbo.open{display:block}
+
+@media(max-width:880px){
+  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}.menu-btn{display:flex}
+  .content{padding:18px 14px}.kg{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}.sg{grid-template-columns:1fr}
+  .dg{grid-template-columns:1fr}.topbar{padding:0 14px}
+}
+@media(max-width:480px){.kg{grid-template-columns:1fr 1fr}.drst{display:none}.priv-chip{display:none}}
+</style>
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12 relative">
-    <!-- ヘッダー -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-indigo-700">
-                <i data-lucide="calculator" class="w-6 h-6"></i>
-                <h1 class="font-bold text-lg sm:text-xl">確定申告ダッシュボード＆シミュレーター</h1>
-            </div>
-            <div class="text-sm text-slate-500 hidden sm:block">
-                <span class="font-medium text-slate-700">赤羽 慶太</span> 様
-            </div>
+<body>
+<div class="shell">
+
+<nav class="sidebar" id="sb">
+  <div class="sb-logo">
+    <div class="sb-mark">申</div>
+    <div class="sb-txt">確定申告ナビ<span>Tax Dashboard</span></div>
+  </div>
+  <div class="sb-sec" style="margin-top:8px;">
+    <div class="sb-lbl">メイン</div>
+    <button class="sb-item active" id="nav-d" onclick="go('d',this)"><span class="ico">📊</span>振り返りレポート</button>
+    <button class="sb-item" id="nav-a" onclick="go('a',this)"><span class="ico">📈</span>全期間分析</button>
+    <button class="sb-item" id="nav-s" onclick="go('s',this)"><span class="ico">🧮</span>税額シミュレーター</button>
+  </div>
+  <div class="sb-sec" style="margin-top:8px;">
+    <div class="sb-lbl">ツール</div>
+    <button class="sb-item" id="nav-ded" onclick="go('ded',this)"><span class="ico">💰</span>控除ガイド</button>
+    <button class="sb-item" id="nav-dm" onclick="go('dm',this)"><span class="ico">📁</span>データ管理<span class="sb-bdg" id="sbcnt">0</span></button>
+    <button class="sb-item" id="nav-g" onclick="go('g',this)"><span class="ico">📖</span>使い方ガイド</button>
+  </div>
+  <div class="sb-priv">
+    <div class="sb-priv-inner">
+      <div class="sb-priv-ttl">🔒 プライバシー保護</div>
+      <div class="sb-priv-txt">全データはブラウザ内のみで処理。外部送信なし。ページを閉じると完全消去されます。</div>
+    </div>
+  </div>
+</nav>
+<div class="sbo" id="sbo" onclick="closeSb()"></div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-l">
+      <button class="menu-btn" onclick="toggleSb()">☰</button>
+      <div class="topbar-ttl" id="tttl">振り返りレポート</div>
+    </div>
+    <div class="topbar-r">
+      <div class="priv-chip">🔒 データはこの画面のみ・閉じると消去</div>
+      <button class="btn-add" onclick="go('dm',document.getElementById('nav-dm'))">＋ データ追加</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="vd">
+      <div class="ph">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div><h1 id="dh1">振り返りレポート</h1><p id="dsub">データを追加するとここに分析が表示されます</p></div>
+          <div class="ytabs" id="ytabs"></div>
         </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 mt-6">
-        <!-- タブナビゲーション -->
-        <div class="flex p-1 bg-slate-200/60 rounded-xl mb-6 w-full max-w-2xl mx-auto sm:mx-0 overflow-x-auto">
-            <button id="btn-dashboard" onclick="switchTab('dashboard')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap bg-white text-indigo-700 shadow-sm">
-                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                過去の振り返り
-            </button>
-            <button id="btn-simulator" onclick="switchTab('simulator')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap text-slate-600 hover:text-slate-900">
-                <i data-lucide="pie-chart" class="w-4 h-4"></i>
-                今期シミュレーター
-            </button>
-            <button id="btn-data" onclick="switchTab('data')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap text-slate-600 hover:text-slate-900">
-                <i data-lucide="file-up" class="w-4 h-4"></i>
-                データ追加
-            </button>
+      </div>
+      <div id="dcont">
+        <div class="es">
+          <div class="ei">📂</div><h3>データがありません</h3>
+          <p>「データ管理」から確定申告データを追加してください</p>
+          <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;">
+            <button class="btn bp" onclick="go('dm',document.getElementById('nav-dm'))">📁 データを追加する</button>
+            <button class="btn bo" onclick="loadSample()">📋 サンプルデータで試す</button>
+          </div>
         </div>
-
-        <!-- コンテンツエリア: ダッシュボード -->
-        <div id="tab-dashboard" class="fade-in block space-y-6"></div>
-
-        <!-- コンテンツエリア: シミュレーター -->
-        <div id="tab-simulator" class="fade-in hidden">
-            <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800">今期シミュレーター</h2>
-                    <p class="text-slate-500 mt-1">数値を動かして、税金と手取りの変化を確認しましょう</p>
-                </div>
-                <button id="sim-copy-btn" onclick="copyLatestToSim()" class="hidden flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    <i data-lucide="refresh-ccw" class="w-4 h-4"></i>
-                    <span id="sim-copy-text">最新の実績をセット</span>
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- 入力パネル -->
-                <div class="lg:col-span-5 space-y-4">
-                    
-                    <!-- AI目安アシスト トグル -->
-                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
-                        <div>
-                            <p class="font-bold text-indigo-900 text-sm flex items-center gap-2">
-                                <i data-lucide="zap" class="w-4 h-4 text-amber-500 fill-amber-500"></i>AI目安アシスト機能
-                            </p>
-                            <p class="text-xs text-indigo-700 mt-1">売上を入れると経費・社保の目安を自動計算します</p>
-                        </div>
-                        <button id="auto-sync-toggle" onclick="toggleAutoSync()" class="w-12 h-6 rounded-full bg-indigo-500 relative transition-colors duration-200 focus:outline-none flex-shrink-0">
-                            <div id="auto-sync-knob" class="w-4 h-4 rounded-full bg-white absolute top-1 left-1 transform translate-x-6 transition-transform duration-200"></div>
-                        </button>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 class="font-bold text-lg border-b border-slate-100 pb-3 mb-5 flex items-center gap-2">
-                            <i data-lucide="calculator" class="w-5 h-5 text-indigo-500"></i>収入と支出の予定
-                        </h3>
-                        
-                        <!-- 事業売上 -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="font-semibold text-slate-700 text-sm">事業売上（見込）</label>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-bRev-num" oninput="syncSim('bRev', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                    <span class="text-sm text-slate-500">円</span>
-                                </div>
-                            </div>
-                            <input type="range" id="sim-bRev-range" min="0" max="10000000" step="10000" oninput="syncSim('bRev', this.value, true)" class="w-full h-2 rounded-lg text-sky-500">
-                        </div>
-
-                        <!-- 給与収入 -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="font-semibold text-slate-700 text-sm">給与収入（見込）</label>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-sRev-num" oninput="syncSim('sRev', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                    <span class="text-sm text-slate-500">円</span>
-                                </div>
-                            </div>
-                            <input type="range" id="sim-sRev-range" min="0" max="10000000" step="10000" oninput="syncSim('sRev', this.value, true)" class="w-full h-2 rounded-lg text-indigo-500">
-                        </div>
-
-                        <!-- 経費 -->
-                        <div class="relative pt-4 border-t border-slate-100 mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="font-semibold text-slate-700 text-sm">経費の予定・目標</label>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-exp-num" oninput="syncSim('exp', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                                    <span class="text-sm text-slate-500">円</span>
-                                </div>
-                            </div>
-                            <input type="range" id="sim-exp-range" min="0" step="10000" oninput="syncSim('exp', this.value, true)" class="w-full h-2 rounded-lg text-orange-500">
-                            <p class="text-xs text-slate-400 mt-1.5 flex justify-between">
-                                <span id="sim-exp-help">現在の経費率: 0%</span>
-                                <span id="sim-exp-badge" class="hidden text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold">手動調整中</span>
-                            </p>
-                        </div>
-
-                        <!-- 社会保険料等 -->
-                        <div class="relative pt-4 border-t border-slate-100 mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="font-semibold text-slate-700 text-sm">社会保険料等 支払予定額</label>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-socialIns-num" oninput="syncSim('socialIns', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-none">
-                                    <span class="text-sm text-slate-500">円</span>
-                                </div>
-                            </div>
-                            <input type="range" id="sim-socialIns-range" min="0" max="2000000" step="10000" oninput="syncSim('socialIns', this.value, true)" class="w-full h-2 rounded-lg text-purple-500">
-                            <p class="text-xs text-slate-400 mt-1.5 flex justify-between">
-                                <span>国民健康保険、国民年金などの年間予定額</span>
-                                <span id="sim-soc-badge" class="hidden text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">手動調整中</span>
-                            </p>
-                        </div>
-
-                        <!-- その他の控除 -->
-                        <div class="relative pt-4 border-t border-slate-100 bg-slate-50 -mx-6 px-6 -mb-6 pb-6 rounded-b-2xl">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="font-semibold text-slate-700 text-sm">各種控除（任意入力）</label>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-otherDed-num" oninput="syncSim('otherDed', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 focus:outline-none" placeholder="0">
-                                    <span class="text-sm text-slate-500">円</span>
-                                </div>
-                            </div>
-                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">障害者控除、配偶者控除、生命保険料控除などの合計額。（※基礎控除・青色申告控除は自動適用済みです）</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 結果パネル -->
-                <div class="lg:col-span-7 space-y-6">
-                    <!-- サマリー -->
-                    <div class="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-8 opacity-10">
-                            <i data-lucide="wallet" class="w-48 h-48"></i>
-                        </div>
-                        <div class="relative z-10">
-                            <p class="text-slate-400 font-medium mb-1">最終的なあなたの手取り額（想定）</p>
-                            <div id="res-netIncome" class="text-4xl sm:text-5xl font-extrabold mb-8 tracking-tight text-emerald-400">¥0</div>
-                            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-slate-700/50">
-                                <div><p class="text-slate-400 text-xs mb-1">総収入</p><p id="res-totalRevenue" class="text-xl font-bold">¥0</p></div>
-                                <div><p class="text-slate-400 text-xs mb-1">税金合計</p><p id="res-totalTaxes" class="text-xl font-bold text-rose-400">¥0</p></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 内訳 -->
-                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                        <h3 class="font-bold text-lg mb-4 border-b border-slate-100 pb-3">計算の内訳</h3>
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                <span class="text-slate-600 text-sm font-medium">給与所得 (給与所得控除後)</span><span id="res-salaryIncome" class="font-bold">¥0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                <span class="text-slate-600 text-sm font-medium">事業所得 (経費差引後)</span><span id="res-businessIncome" class="font-bold">¥0</span>
-                            </div>
-                            
-                            <div class="pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
-                                <span>適用済控除: <span class="font-semibold text-slate-600">青色申告特別控除</span></span><span>-650,000円</span>
-                            </div>
-                            <div class="pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
-                                <span>適用済控除: <span class="font-semibold text-slate-600">基礎控除</span></span><span>-480,000円</span>
-                            </div>
-                            <div id="res-otherDed-row" class="hidden pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
-                                <span>適用済控除: <span class="font-semibold text-slate-600">その他各種控除</span></span><span id="res-otherDed-val">-0円</span>
-                            </div>
-
-                            <div class="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg mt-2">
-                                <span class="text-indigo-800 text-sm font-bold">課税される所得金額</span><span id="res-taxableIncome" class="font-bold text-indigo-700 text-lg">¥0</span>
-                            </div>
-                            <div class="pt-4 mt-2 border-t border-slate-100 grid grid-cols-2 gap-4">
-                                <div class="p-4 bg-rose-50 rounded-xl border border-rose-100">
-                                    <p class="text-rose-600 text-xs font-bold mb-1">想定 所得税</p><p id="res-incomeTax" class="text-xl font-extrabold text-rose-700">¥0</p>
-                                </div>
-                                <div class="p-4 bg-rose-50 rounded-xl border border-rose-100">
-                                    <p class="text-rose-600 text-xs font-bold mb-1">想定 住民税</p><p id="res-residentTax" class="text-xl font-extrabold text-rose-700">¥0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- グラフ -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 class="font-bold text-sm text-slate-700 mb-4">お金の行方グラフ（総収入に対する割合）</h3>
-                        <div class="h-8 w-full rounded-full overflow-hidden flex bg-slate-100">
-                            <div id="bar-net" class="bg-emerald-400 flex items-center justify-center text-xs font-bold text-slate-900 overflow-hidden transition-all duration-300" title="手取り" style="width: 0%">手取り</div>
-                            <div id="bar-exp" class="bg-orange-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="経費" style="width: 0%">経費</div>
-                            <div id="bar-soc" class="bg-purple-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="社会保険料" style="width: 0%">社保</div>
-                            <div id="bar-tax" class="bg-rose-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="税金" style="width: 0%">税金</div>
-                        </div>
-                        <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 justify-center">
-                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-emerald-400"></div>手取り (<span id="lbl-net">0</span>%)</div>
-                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-orange-400"></div>経費 (<span id="lbl-exp">0</span>%)</div>
-                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-purple-400"></div>社保等 (<span id="lbl-soc">0</span>%)</div>
-                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-rose-500"></div>税金 (<span id="lbl-tax">0</span>%)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- コンテンツエリア: データ管理 -->
-        <div id="tab-data" class="fade-in hidden space-y-8"></div>
-    </main>
-
-    <!-- UI モーダル (詳細表示用) -->
-    <div id="dashboard-modal" class="hidden fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-zoomIn border border-slate-200">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 id="modal-title" class="font-bold text-lg text-slate-800 flex items-center gap-2">詳細</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 transition-colors">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div id="modal-content" class="p-6 space-y-4 max-h-[60vh] overflow-y-auto bg-white">
-                <!-- 動的生成エリア -->
-            </div>
-        </div>
+      </div>
     </div>
 
-    <script>
-        // === ユーティリティ ===
-        const formatCurrency = (amount) => {
-            return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(amount || 0);
-        };
+    <!-- ALL ANALYSIS -->
+    <div class="view" id="va">
+      <div class="ph"><h1>📈 全期間トレンド分析</h1><p>登録済み全年度を横断比較します（2年以上のデータが必要）</p></div>
+      <div id="acont"></div>
+    </div>
 
-        // === データ構造 ===
-        let pastData = {
-            2024: {
-                year: '2024年度 (令和6年分)', businessRev: 1768504, salaryRev: 3590579, totalRev: 5359083,
-                expenses: 969159, socialIns: 795697, incomeTax: 50100, deductions: 1578697,
-                revenueDetails: [{ name: '(有)フクヤフドウサン', amount: 702504 }, { name: '(株)ライズデザインワークス', amount: 516000 }, { name: '(株)ハラヤ', amount: 250000 }, { name: 'アルファ・マテリア', amount: 275000 }, { name: 'その他', amount: 25000 }],
-                expenseDetails: [{ name: '減価償却費', amount: 368600 }, { name: '接待交際費', amount: 310311 }, { name: '通信費', amount: 69271 }, { name: '消耗品費', amount: 11030 }, { name: 'その他', amount: 209947 }]
-            },
-            2025: {
-                year: '2025年度 (令和7年分)', businessRev: 1983285, salaryRev: 3023616, totalRev: 5006901,
-                expenses: 397203, socialIns: 434009, incomeTax: 68600, deductions: 1597749,
-                revenueDetails: [{ name: '山田 亮平', amount: 780000 }, { name: '(有)フクヤフドウサン', amount: 746285 }, { name: '(株)ハラヤ', amount: 300000 }, { name: 'アルファ・マテリア', amount: 125000 }, { name: 'その他', amount: 32000 }],
-                expenseDetails: [{ name: '接待交際費', amount: 254962 }, { name: '消耗品費', amount: 33090 }, { name: '通信費', amount: 6484 }, { name: 'その他', amount: 102667 }]
-            }
-        };
-
-        // === タブ切り替えロジック ===
-        function switchTab(tabId) {
-            const tabs = ['dashboard', 'simulator', 'data'];
-            tabs.forEach(t => {
-                const el = document.getElementById(`tab-${t}`);
-                const btn = document.getElementById(`btn-${t}`);
-                if(t === tabId) {
-                    el.classList.remove('hidden');
-                    btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
-                    btn.classList.remove('text-slate-600', 'hover:text-slate-900');
-                } else {
-                    el.classList.add('hidden');
-                    btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
-                    btn.classList.add('text-slate-600', 'hover:text-slate-900');
-                }
-            });
-
-            if (tabId === 'dashboard') renderDashboard();
-            if (tabId === 'simulator') initSimulator();
-            if (tabId === 'data') renderDataManager();
-            
-            lucide.createIcons();
-        }
-
-        // === 1. ダッシュボードロジック ===
-        function generateInsights(curr, prev) {
-            const insights = [];
-            const topClient = curr.revenueDetails?.sort((a,b) => b.amount - a.amount)[0];
-            if (topClient) {
-                insights.push({
-                    title: '主な収入源と傾向', iconName: 'award', color: 'text-amber-600', bg: 'bg-amber-100',
-                    text: `今期の事業収入トップは「${topClient.name}」で、${formatCurrency(topClient.amount)}の売上がありました。上位のクライアントから安定した収益を確保できており、事業の軸として育ってきています。`
-                });
-            }
-            if (prev) {
-                if (curr.businessRev > prev.businessRev && curr.expenses < prev.expenses) {
-                    insights.push({
-                        title: '素晴らしい支出効率の改善！', iconName: 'trending-up', color: 'text-emerald-600', bg: 'bg-emerald-100',
-                        text: `経費を前年より${formatCurrency(prev.expenses - curr.expenses)}減らしたにも関わらず、事業売上は${formatCurrency(curr.businessRev - prev.businessRev)}増加しています。無駄が省かれ、非常に効率的な事業運営ができています！`
-                    });
-                } else if (curr.businessRev > prev.businessRev) {
-                    insights.push({
-                        title: '順調な売上成長', iconName: 'trending-up', color: 'text-emerald-600', bg: 'bg-emerald-100',
-                        text: `前年と比べて事業売上が${formatCurrency(curr.businessRev - prev.businessRev)}増加しました。事業拡大のペースが順調です。`
-                    });
-                }
-            }
-            const topExpense = curr.expenseDetails?.sort((a,b) => b.amount - a.amount).find(e => e.name !== 'その他');
-            if (topExpense) {
-                const expenseRatio = ((topExpense.amount / curr.expenses) * 100).toFixed(1);
-                let advice = '';
-                if (topExpense.name.includes('交際費')) {
-                    advice = `経費の中で「${topExpense.name}」が${formatCurrency(topExpense.amount)}と最も多く、経費全体の${expenseRatio}%を占めています。もし不要な会食などがあれば少し減らし、その分を広告宣伝費や機材への投資に回すと、さらに売上アップを狙えるかもしれません。`;
-                } else {
-                    advice = `経費の中では「${topExpense.name}」が全体の${expenseRatio}% (${formatCurrency(topExpense.amount)}) を占めています。この項目の費用対効果を見直すことで、手元に残る利益を増やせる可能性があります。`;
-                }
-                insights.push({ title: '経費の見直し提案', iconName: 'lightbulb', color: 'text-indigo-600', bg: 'bg-indigo-100', text: advice });
-            }
-            return insights;
-        }
-
-        // ▼ モーダル開閉ロジック
-        function openModal(type) {
-            const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
-            if(years.length === 0) return;
-            const latest = pastData[years[0]];
-
-            const titleEl = document.getElementById('modal-title');
-            const contentEl = document.getElementById('modal-content');
-
-            if (type === 'total') {
-                titleEl.innerHTML = `<i data-lucide="briefcase" class="w-5 h-5 text-blue-500"></i> 総収入の内訳`;
-                contentEl.innerHTML = `
-                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="text-slate-600">事業収入</span><span class="font-bold">${formatCurrency(latest.businessRev)}</span></div>
-                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="text-slate-600">給与収入</span><span class="font-bold">${formatCurrency(latest.salaryRev)}</span></div>
-                    <div class="border-t border-slate-200 mt-2 pt-3 flex justify-between p-3"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-blue-600 text-lg">${formatCurrency(latest.totalRev)}</span></div>
-                `;
-            } else if (type === 'expense') {
-                titleEl.innerHTML = `<i data-lucide="file-text" class="w-5 h-5 text-orange-500"></i> 事業経費の詳細`;
-                let html = latest.expenseDetails?.sort((a,b)=>b.amount-a.amount).map(item => `
-                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg mb-2">
-                        <span class="text-slate-600">${item.name}</span><span class="font-bold">${formatCurrency(item.amount)}</span>
-                    </div>
-                `).join('') || '<p class="text-slate-500 text-center text-sm py-4">内訳データがありません</p>';
-                html += `<div class="border-t border-slate-200 mt-2 pt-3 flex justify-between p-3"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-orange-600 text-lg">${formatCurrency(latest.expenses)}</span></div>`;
-                contentEl.innerHTML = html;
-            } else if (type === 'social') {
-                titleEl.innerHTML = `<i data-lucide="landmark" class="w-5 h-5 text-purple-500"></i> 社会保険料等`;
-                contentEl.innerHTML = `
-                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">国民年金、国民健康保険などの合算金額です。<br>抽出された確定申告書データに基づく合計額となります。</p>
-                    <div class="flex justify-between p-4 bg-purple-50 rounded-xl border border-purple-100"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-purple-600 text-xl">${formatCurrency(latest.socialIns)}</span></div>
-                `;
-            } else if (type === 'tax') {
-                titleEl.innerHTML = `<i data-lucide="dollar-sign" class="w-5 h-5 text-rose-500"></i> 算出所得税`;
-                contentEl.innerHTML = `
-                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">課税所得をもとに算出された所得税額です。<br>（※住宅ローン控除等の税額控除前の金額です）</p>
-                    <div class="flex justify-between p-4 bg-rose-50 rounded-xl border border-rose-100"><span class="font-bold text-slate-800">算出税額</span><span class="font-bold text-rose-600 text-xl">${formatCurrency(latest.incomeTax)}</span></div>
-                `;
-            }
-
-            document.getElementById('dashboard-modal').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function closeModal() {
-            document.getElementById('dashboard-modal').classList.add('hidden');
-        }
-
-        // モーダルの外側クリックで閉じる
-        document.getElementById('dashboard-modal').addEventListener('click', function(e) {
-            if(e.target === this) closeModal();
-        });
-
-        function renderDashboard() {
-            const container = document.getElementById('tab-dashboard');
-            const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
-            
-            if (years.length === 0) {
-                container.innerHTML = `
-                <div class="text-center py-20 animate-in fade-in">
-                    <i data-lucide="alert-circle" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-                    <h2 class="text-xl font-bold text-slate-600">データがありません</h2>
-                    <p class="text-slate-500 mt-2">「データ追加」タブから実績データを追加してください。</p>
-                </div>`;
-                return;
-            }
-
-            const latestYear = years[0];
-            const prevYear = years[1];
-            const dLatest = pastData[latestYear];
-            const dPrev = prevYear ? pastData[prevYear] : null;
-
-            const insights = generateInsights(dLatest, dPrev);
-            const insightsHtml = insights.map(ins => `
-                <div class="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 hover:bg-white/15 transition-colors">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="p-2 rounded-xl ${ins.bg}"><i data-lucide="${ins.iconName}" class="w-5 h-5 ${ins.color}"></i></div>
-                        <h4 class="font-bold text-slate-100">${ins.title}</h4>
-                    </div>
-                    <p class="text-sm text-slate-300 leading-relaxed font-medium">${ins.text}</p>
+    <!-- SIMULATOR -->
+    <div class="view" id="vs">
+      <div class="ph">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div><h1>🧮 税額シミュレーター</h1><p>スライダーを動かして手取り・税額をリアルタイム試算します</p></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn bo" style="font-size:12px;" onclick="loadLatest()">最新実績をセット</button>
+            <button class="btn bg" style="font-size:12px;" onclick="resetSim()">リセット</button>
+          </div>
+        </div>
+      </div>
+      <div class="sg">
+        <div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="cb" style="padding:13px 18px;">
+              <div class="tgw">
+                <div class="tg2 on" id="aitg" onclick="toggleAI()"><div class="tgk"></div></div>
+                <div><div style="font-size:13px;font-weight:700;">⚡ AI目安アシスト</div><div style="font-size:11px;color:var(--txs);">売上入力に連動して経費・社保の目安を自動計算</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h3>収入・支出を入力</h3></div>
+            <div class="cb">
+              <div class="slb">
+                <div class="slh">
+                  <div class="sln"><span class="dot" style="background:var(--p)"></span>事業売上（見込）</div>
+                  <div class="snw"><input class="snum" type="number" id="sbRev" value="0" oninput="ss('bRev',this.value,true)"><span class="su">円</span></div>
                 </div>
-            `).join('');
-
-            const getDiffHtml = (curr, prev, isCost) => {
-                if (!prev) return `<span class="text-slate-400">前年データなし</span>`;
-                const diff = curr - prev;
-                const isPos = diff >= 0;
-                const percent = ((diff / prev) * 100).toFixed(1);
-                const trendColor = isPos ? (isCost ? 'text-rose-600' : 'text-emerald-600') : (isCost ? 'text-emerald-600' : 'text-rose-600');
-                const icon = isPos ? 'trending-up' : 'trending-down';
-                const sign = isPos ? '+' : '';
-                return `
-                    <span class="text-slate-500">前年比</span>
-                    <span class="font-medium flex items-center gap-1 ${trendColor}">
-                        <i data-lucide="${icon}" class="w-3 h-3"></i> ${sign}${percent}%
-                    </span>
-                `;
-            };
-
-            // ▼ カードにonclickとホバーエフェクトを追加
-            const card = (type, title, curr, prev, icon, colorCls, isCost) => `
-                <div onclick="openModal('${type}')" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col relative overflow-hidden cursor-pointer hover:shadow-md hover:border-${colorCls.split('-')[1]}-300 transition-all group">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 ${colorCls} group-hover:scale-110 group-hover:opacity-10 transition-all duration-300"><i data-lucide="${icon}" class="w-16 h-16"></i></div>
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2 text-slate-600">
-                            <div class="p-2 rounded-lg ${colorCls} bg-opacity-10"><i data-lucide="${icon}" class="w-4 h-4 ${colorCls}"></i></div>
-                            <h3 class="font-semibold text-sm">${title}</h3>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
-                    </div>
-                    <div class="text-2xl font-bold text-slate-800 mb-3">${formatCurrency(curr)}</div>
-                    <div class="mt-auto pt-3 border-t border-slate-50 text-xs flex justify-between items-center">
-                        ${getDiffHtml(curr, prev, isCost)}
-                    </div>
+                <input type="range" id="rbRev" min="0" max="10000000" step="10000" value="0" oninput="ss('bRev',this.value,true)">
+              </div>
+              <div class="slb">
+                <div class="slh">
+                  <div class="sln"><span class="dot" style="background:var(--gn)"></span>給与収入（見込）</div>
+                  <div class="snw"><input class="snum" type="number" id="ssRev" value="0" oninput="ss('sRev',this.value,true)"><span class="su">円</span></div>
                 </div>
-            `;
-
-            const expDetailsHtml = dLatest.expenseDetails?.sort((a,b)=>b.amount-a.amount).map(item => {
-                const ratio = ((item.amount / dLatest.expenses) * 100).toFixed(1);
-                return `
-                <div>
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium text-slate-700">${item.name}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-slate-500 text-xs">${ratio}%</span>
-                            <span class="font-bold text-slate-800">${formatCurrency(item.amount)}</span>
-                        </div>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2">
-                        <div class="bg-orange-400 h-2 rounded-full" style="width: ${ratio}%"></div>
-                    </div>
-                </div>`;
-            }).join('') || '<p class="text-sm text-slate-500 text-center py-4">データがありません</p>';
-
-            const revDetailsHtml = dLatest.revenueDetails?.sort((a,b)=>b.amount-a.amount).slice(0,5).map(item => {
-                const ratio = ((item.amount / dLatest.businessRev) * 100).toFixed(1);
-                return `
-                <div>
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium text-slate-700 truncate pr-2">${item.name}</span>
-                        <div class="flex items-center gap-3 shrink-0">
-                            <span class="text-slate-500 text-xs">${ratio}%</span>
-                            <span class="font-bold text-slate-800">${formatCurrency(item.amount)}</span>
-                        </div>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2">
-                        <div class="bg-sky-500 h-2 rounded-full" style="width: ${ratio}%"></div>
-                    </div>
-                </div>`;
-            }).join('') || '<p class="text-sm text-slate-500 text-center py-4">データがありません</p>';
-
-            container.innerHTML = `
-                <div class="mb-2">
-                    <h2 class="text-2xl font-bold text-slate-800">${latestYear}年度 振り返りレポート</h2>
-                    <p class="text-slate-500 mt-1">${prevYear ? `前年（${prevYear}年度）のデータと比較した分析結果です。` : `アップロードされたデータを分析しています。`}</p>
+                <input type="range" id="rsRev" min="0" max="10000000" step="10000" value="0" oninput="ss('sRev',this.value,true)">
+              </div>
+              <div style="border-top:1px solid var(--bdr);margin:12px 0;"></div>
+              <div class="slb">
+                <div class="slh">
+                  <div class="sln"><span class="dot" style="background:var(--am)"></span>経費（予定）<span id="aiex" class="tag tb" style="font-size:9px;">AI推計</span></div>
+                  <div class="snw"><input class="snum" type="number" id="sexp" value="0" oninput="ss('exp',this.value,true)"><span class="su">円</span></div>
                 </div>
-
-                <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg overflow-hidden relative">
-                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                    <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-sky-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" style="animation-delay: 2s"></div>
-                    <div class="relative z-10">
-                        <h3 class="font-bold text-xl mb-6 flex items-center gap-2">
-                            <i data-lucide="message-square" class="w-6 h-6 text-indigo-400"></i>
-                            AIからの振り返り・アドバイス
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            ${insightsHtml}
-                        </div>
-                    </div>
+                <input type="range" class="am" id="rexp" min="0" max="5000000" step="10000" value="0" oninput="ss('exp',this.value,true)">
+                <div class="shint" id="erh">経費率: 0.0%（事業売上に対する割合）</div>
+              </div>
+              <div class="slb">
+                <div class="slh">
+                  <div class="sln"><span class="dot" style="background:var(--bl)"></span>社会保険料等<span id="aisc" class="tag tb" style="font-size:9px;">AI推計</span></div>
+                  <div class="snw"><input class="snum" type="number" id="ssoc" value="0" oninput="ss('soc',this.value,true)"><span class="su">円</span></div>
                 </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    ${card('total', '総収入 (事業+給与)', dLatest.totalRev, dPrev?.totalRev, 'briefcase', 'text-blue-600', false)}
-                    ${card('expense', '事業経費', dLatest.expenses, dPrev?.expenses, 'file-text', 'text-orange-600', true)}
-                    ${card('social', '社会保険料等', dLatest.socialIns, dPrev?.socialIns, 'landmark', 'text-purple-600', true)}
-                    ${card('tax', '所得税', dLatest.incomeTax, dPrev?.incomeTax, 'dollar-sign', 'text-rose-600', true)}
+                <input type="range" class="bl" id="rsoc" min="0" max="2000000" step="10000" value="0" oninput="ss('soc',this.value,true)">
+                <div class="shint">国民健康保険・国民年金の年間合計</div>
+              </div>
+              <div style="border-top:1px solid var(--bdr);margin:12px 0;"></div>
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <div class="sln" style="font-size:13px;">各種控除（任意）</div>
+                  <button class="bxs" onclick="openDedPicker()">＋ 控除を選ぶ</button>
                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-orange-500"></i>事業経費の内訳</span>
-                            <span class="text-sm text-slate-500 font-normal cursor-pointer hover:text-orange-500 transition-colors" onclick="openModal('expense')">詳細を見る <i data-lucide="chevron-right" class="w-3 h-3 inline"></i></span>
-                        </h3>
-                        <div class="space-y-4">${expDetailsHtml}</div>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i data-lucide="briefcase" class="w-5 h-5 text-sky-500"></i>事業売上トップ</span>
-                            <span class="text-sm text-slate-500 font-normal">計: ${formatCurrency(dLatest.businessRev)}</span>
-                        </h3>
-                        <div class="space-y-4">${revDetailsHtml}</div>
-                    </div>
+                <div id="sdedl" style="margin-bottom:8px;"></div>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <input class="snum" type="number" id="soded" value="0" oninput="ss('otherDed',this.value,true)" style="width:100%;text-align:left;">
+                  <span class="su">円</span>
                 </div>
-            `;
-        }
-
-        // === 2. シミュレーター ロジック ===
-        let simState = { bRev: 2000000, sRev: 3000000, exp: 500000, socialIns: 500000, otherDed: 0 };
-        let simInitialized = false;
-        let isAutoSync = true; // ▼ AI目安自動連動フラグ
-
-        function toggleAutoSync() {
-            isAutoSync = !isAutoSync;
-            updateToggleUI();
-            if (isAutoSync) autoCalculateEstimates();
-        }
-
-        function updateToggleUI() {
-            const bg = document.getElementById('auto-sync-toggle');
-            const knob = document.getElementById('auto-sync-knob');
-            const expBadge = document.getElementById('sim-exp-badge');
-            const socBadge = document.getElementById('sim-soc-badge');
-
-            if (isAutoSync) {
-                bg.classList.replace('bg-slate-300', 'bg-indigo-500');
-                knob.classList.add('translate-x-6');
-                expBadge.classList.add('hidden');
-                socBadge.classList.add('hidden');
-            } else {
-                bg.classList.replace('bg-indigo-500', 'bg-slate-300');
-                knob.classList.remove('translate-x-6');
-                expBadge.classList.remove('hidden');
-                socBadge.classList.remove('hidden');
-            }
-        }
-
-        // ▼ 売上に連動して経費・社保の目安を自動セットする関数
-        function autoCalculateEstimates() {
-            if (!isAutoSync) return;
-
-            // 1. 経費の目安（過去実績から約20%とする）
-            const expRate = 0.20; 
-            simState.exp = Math.round((simState.bRev * expRate) / 10000) * 10000;
-
-            // 2. 社会保険料の目安（簡易計算）
-            let sIncome = 0;
-            let sRev = simState.sRev;
-            if (sRev <= 1625000) sIncome = Math.max(0, sRev - 550000);
-            else if (sRev <= 1800000) sIncome = sRev - (sRev * 0.4 - 100000);
-            else if (sRev <= 3600000) sIncome = sRev - (sRev * 0.3 + 80000);
-            else if (sRev <= 6600000) sIncome = sRev - (sRev * 0.2 + 440000);
-            else if (sRev <= 8500000) sIncome = sRev - (sRev * 0.1 + 1100000);
-            else sIncome = sRev - 1950000;
-            sIncome = Math.max(0, sIncome);
-
-            let bIncome = Math.max(0, simState.bRev - simState.exp - 650000);
-            let totalInc = sIncome + bIncome;
-
-            if (totalInc > 0) {
-                // 所得の約10% ＋ 均等割等約15万円として計算
-                simState.socialIns = Math.round(((Math.max(0, totalInc - 430000) * 0.1) + 150000) / 10000) * 10000;
-                // ただし売上規模が小さい場合は頭打ちにする
-                if(simState.socialIns > totalInc * 0.3) simState.socialIns = Math.round((totalInc * 0.2) / 10000) * 10000;
-            } else {
-                simState.socialIns = 50000; // 最低限
-            }
-
-            updateSimUIValues();
-            calcSim();
-        }
-
-        function initSimulator() {
-            if (!simInitialized) {
-                const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
-                if (years.length > 0) {
-                    const latest = pastData[years[0]];
-                    simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns, otherDed: 0 };
-                    document.getElementById('sim-copy-btn').classList.remove('hidden');
-                    document.getElementById('sim-copy-text').innerText = `最新の実績(${latest.year.split(' ')[0]})をセット`;
-                }
-                updateSimUIValues();
-                calcSim();
-                simInitialized = true;
-            }
-        }
-
-        function copyLatestToSim() {
-            const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
-            if (years.length > 0) {
-                const latest = pastData[years[0]];
-                simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns, otherDed: 0 };
-                
-                // コピー時は実測値を優先するため自動連動をOFFにする
-                if (isAutoSync) toggleAutoSync();
-                
-                updateSimUIValues();
-                calcSim();
-            }
-        }
-
-        // ▼ 値の同期（手動操作時はisManual = true）
-        function syncSim(field, valStr, isManual = false) {
-            const value = Number(valStr) || 0;
-            simState[field] = value;
-            
-            if(field === 'bRev') {
-                const expRange = document.getElementById('sim-exp-range');
-                expRange.max = value || 1000000;
-            }
-
-            if (isManual) {
-                // 経費や社保を手動で動かした場合は、自動連動をOFFにする
-                if (field === 'exp' || field === 'socialIns') {
-                    if (isAutoSync) toggleAutoSync();
-                }
-                // 売上を変更し、自動連動ONなら目安を再計算
-                if (field === 'bRev' || field === 'sRev') {
-                    if (isAutoSync) {
-                        autoCalculateEstimates();
-                        return; // 内部で calcSim が呼ばれるため抜ける
-                    }
-                }
-            }
-
-            updateSimUIValues();
-            calcSim();
-        }
-
-        function updateSimUIValues() {
-            ['bRev', 'sRev', 'exp', 'socialIns'].forEach(k => {
-                document.getElementById(`sim-${k}-num`).value = simState[k];
-                document.getElementById(`sim-${k}-range`).value = simState[k];
-            });
-            document.getElementById('sim-otherDed-num').value = simState.otherDed || '';
-            document.getElementById('sim-exp-range').max = simState.bRev || 1000000;
-            
-            const expRatio = simState.bRev > 0 ? ((simState.exp / simState.bRev) * 100).toFixed(1) : 0;
-            document.getElementById('sim-exp-help').innerText = `現在の経費率: ${expRatio}% (事業売上に対する割合)`;
-        }
-
-        function calcSim() {
-            const { bRev, sRev, exp, socialIns, otherDed } = simState;
-            
-            let salaryIncome = 0;
-            if (sRev <= 1625000) salaryIncome = sRev - 550000;
-            else if (sRev <= 1800000) salaryIncome = sRev - (sRev * 0.4 - 100000);
-            else if (sRev <= 3600000) salaryIncome = sRev - (sRev * 0.3 + 80000);
-            else if (sRev <= 6600000) salaryIncome = sRev - (sRev * 0.2 + 440000);
-            else if (sRev <= 8500000) salaryIncome = sRev - (sRev * 0.1 + 1100000);
-            else salaryIncome = sRev - 1950000;
-            salaryIncome = Math.max(0, salaryIncome);
-
-            // 事業所得 (青色65万控除前)
-            const bIncomeRaw = Math.max(0, bRev - exp);
-            const businessIncome = Math.max(0, bIncomeRaw - 650000);
-            const totalIncome = salaryIncome + businessIncome;
-
-            // 課税所得 (基礎48万 + 社保 + その他の控除)
-            const basicDeduction = 480000;
-            const totalDeductions = basicDeduction + socialIns + otherDed;
-            let taxableIncome = Math.max(0, totalIncome - totalDeductions);
-            taxableIncome = Math.floor(taxableIncome / 1000) * 1000;
-
-            let incomeTax = 0;
-            if (taxableIncome <= 1950000) incomeTax = taxableIncome * 0.05;
-            else if (taxableIncome <= 3300000) incomeTax = taxableIncome * 0.10 - 97500;
-            else if (taxableIncome <= 6950000) incomeTax = taxableIncome * 0.20 - 427500;
-            else if (taxableIncome <= 9000000) incomeTax = taxableIncome * 0.23 - 636000;
-            else if (taxableIncome <= 18000000) incomeTax = taxableIncome * 0.33 - 1536000;
-            else if (taxableIncome <= 40000000) incomeTax = taxableIncome * 0.40 - 2796000;
-            else incomeTax = taxableIncome * 0.45 - 4796000;
-            
-            const totalIncomeTax = Math.floor((incomeTax * 1.021) / 100) * 100;
-            
-            let resTaxable = Math.max(0, totalIncome - (socialIns + otherDed + 430000));
-            resTaxable = Math.floor(resTaxable / 1000) * 1000;
-            const residentTax = Math.floor(resTaxable * 0.10) + 5000;
-
-            const totalTaxes = totalIncomeTax + residentTax;
-            const totalRevenue = bRev + sRev;
-            const netIncome = totalRevenue - exp - socialIns - totalTaxes;
-
-            document.getElementById('res-netIncome').innerText = formatCurrency(netIncome);
-            document.getElementById('res-totalRevenue').innerText = formatCurrency(totalRevenue);
-            document.getElementById('res-totalTaxes').innerText = formatCurrency(totalTaxes);
-            
-            document.getElementById('res-salaryIncome').innerText = formatCurrency(salaryIncome);
-            document.getElementById('res-businessIncome').innerText = formatCurrency(businessIncome);
-            document.getElementById('res-taxableIncome').innerText = formatCurrency(taxableIncome);
-            document.getElementById('res-incomeTax').innerText = formatCurrency(totalIncomeTax);
-            document.getElementById('res-residentTax').innerText = formatCurrency(residentTax);
-
-            // 任意控除の表示制御
-            if (otherDed > 0) {
-                document.getElementById('res-otherDed-row').classList.remove('hidden');
-                document.getElementById('res-otherDed-val').innerText = `-${formatCurrency(otherDed)}`;
-            } else {
-                document.getElementById('res-otherDed-row').classList.add('hidden');
-            }
-
-            const getPct = (val) => totalRevenue > 0 ? ((val / totalRevenue) * 100).toFixed(1) : 0;
-            const netPct = Math.max(0, getPct(netIncome));
-            const expPct = getPct(exp);
-            const socPct = getPct(socialIns);
-            const taxPct = getPct(totalTaxes);
-
-            document.getElementById('bar-net').style.width = `${netPct}%`;
-            document.getElementById('bar-exp').style.width = `${expPct}%`;
-            document.getElementById('bar-soc').style.width = `${socPct}%`;
-            document.getElementById('bar-tax').style.width = `${taxPct}%`;
-
-            document.getElementById('lbl-net').innerText = netPct;
-            document.getElementById('lbl-exp').innerText = expPct;
-            document.getElementById('lbl-soc').innerText = socPct;
-            document.getElementById('lbl-tax').innerText = taxPct;
-        }
-
-        // === 3. データ管理ロジック ===
-        let dmState = { step: 'idle', editYearKey: '', editData: null };
-
-        function renderDataManager() {
-            const container = document.getElementById('tab-data');
-            const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
-            
-            let topHtml = '';
-            if (dmState.step === 'idle') {
-                topHtml = `
-                    <div class="border-2 border-dashed border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 group" onclick="document.getElementById('file-upload').click()">
-                        <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                            <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
-                        </div>
-                        <p class="text-indigo-900 font-bold text-lg mb-1">確定申告書(PDF)をアップロード</p>
-                        <p class="text-indigo-600/70 text-sm">クリックしてファイルを選択（デモ: 2023年データが抽出されます）</p>
-                        <input type="file" id="file-upload" class="hidden" accept=".pdf,.json" onchange="handleFileSelect(event)">
-                    </div>`;
-            } else if (dmState.step === 'processing') {
-                topHtml = `
-                    <div class="py-16 text-center">
-                        <i data-lucide="loader-2" class="w-12 h-12 text-indigo-500 mx-auto animate-spin mb-4"></i>
-                        <h3 class="text-lg font-bold text-slate-700">AIがPDFを解析中...</h3>
-                        <p class="text-sm text-slate-500 mt-2">売上や経費の内訳を自動で抽出・分析しています</p>
-                    </div>`;
-            } else if (dmState.step === 'review') {
-                topHtml = `
-                    <div class="zoom-in">
-                        <div class="flex items-center gap-2 mb-6 text-emerald-600 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                            <i data-lucide="check-circle" class="w-5 h-5"></i>
-                            <span class="font-bold">データの抽出が完了しました。内容を確認して保存してください。</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">管理年度</label><input type="number" value="${dmState.editYearKey}" onchange="dmState.editYearKey=this.value" class="w-full border border-slate-300 rounded-lg p-2 font-medium"></div>
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">表示名</label><input type="text" value="${dmState.editData.year}" onchange="dmState.editData.year=this.value" class="w-full border border-slate-300 rounded-lg p-2 font-medium"></div>
-                            <div class="col-span-1 md:col-span-2 border-t border-slate-200 my-2 pt-4"></div>
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">事業収入合計</label><input type="number" value="${dmState.editData.businessRev}" oninput="syncEdit('businessRev', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">給与収入合計</label><input type="number" value="${dmState.editData.salaryRev}" oninput="syncEdit('salaryRev', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">事業経費合計</label><input type="number" value="${dmState.editData.expenses}" oninput="syncEdit('expenses', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
-                            <div><label class="block text-xs font-bold text-slate-500 mb-1">社会保険料等</label><input type="number" value="${dmState.editData.socialIns}" oninput="syncEdit('socialIns', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
-                        </div>
-                        <div class="flex gap-3 mt-6 justify-end">
-                            <button onclick="dmCancel()" class="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">キャンセル</button>
-                            <button onclick="dmSave()" class="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-sm">
-                                <i data-lucide="save" class="w-4 h-4"></i> 保存して追加
-                            </button>
-                        </div>
-                    </div>`;
-            }
-
-            const listHtml = years.map(y => `
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group">
-                    <button onclick="dmDelete('${y}')" class="absolute top-3 right-3 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="削除">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                    <div class="font-bold text-indigo-900 mb-3 border-b border-slate-100 pb-2">${pastData[y].year}</div>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between"><span class="text-slate-500">総収入:</span> <span class="font-semibold">${formatCurrency(pastData[y].totalRev)}</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500">経費:</span> <span class="font-semibold">${formatCurrency(pastData[y].expenses)}</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500">所得税:</span> <span class="font-semibold text-rose-600">${formatCurrency(pastData[y].incomeTax)}</span></div>
-                    </div>
+                <div class="shint">基礎控除(48万)・青色申告控除(65万)は自動適用 ✓</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="rhero">
+            <div class="hl">💰 推定手取り額（年間）</div>
+            <div class="ha" id="rnet">¥0</div>
+            <div class="hsub">
+              <div><div class="hsl">総収入</div><div class="hsv" id="rtrev">¥0</div></div>
+              <div><div class="hsl" style="color:#FCA5A5;">税金合計</div><div class="hsv" style="color:#FCA5A5;" id="rttax">¥0</div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="cb" style="padding:14px 18px;">
+              <div style="font-size:11px;font-weight:700;color:var(--txs);margin-bottom:7px;">総収入の使途 — 内訳割合</div>
+              <div class="bstack" id="simbar"></div>
+              <div class="bleg" id="simbleg"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h3>計算の内訳 & 算出根拠</h3><button class="bxs" onclick="toggleF()" id="ftbtn">計算式を表示</button></div>
+            <div class="cb">
+              <div class="bdr-row"><span class="bl2">給与所得（給与所得控除後）</span><span class="bv" id="rsali">¥0</span></div>
+              <div class="bdr-row"><span class="bl2">事業所得（経費・青申控除後）</span><span class="bv" id="rbusi">¥0</span></div>
+              <div class="dl"><span class="dln">▸ 青色申告特別控除</span><span>－650,000円</span></div>
+              <div class="dl"><span class="dln">▸ 基礎控除</span><span>－480,000円</span></div>
+              <div class="dl"><span class="dln">▸ 社会保険料控除</span><span id="rdsv">－0円</span></div>
+              <div class="dl" id="rdor" style="display:none;"><span class="dln">▸ その他各種控除</span><span id="rdov">－0円</span></div>
+              <div class="bdr-row hl2" style="margin-top:8px;"><span class="bl2">課税所得金額</span><span class="bv" id="rtxi">¥0</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0;">
+                <div style="background:var(--rdl);border:1px solid #F5BABA;border-radius:9px;padding:11px 13px;">
+                  <div style="font-size:10px;font-weight:700;color:var(--rd);margin-bottom:3px;">所得税（復興税込）</div>
+                  <div style="font-size:19px;font-weight:900;font-family:var(--mono);color:var(--rd);" id="rit">¥0</div>
+                  <div style="font-size:10px;color:var(--rd);opacity:.7;margin-top:2px;">税率 <span id="rtrate" class="rate-bdg">0%</span></div>
                 </div>
-            `).join('') || `<div class="col-span-full text-center py-10 text-slate-500 bg-slate-100/50 rounded-xl border border-dashed border-slate-300">データがありません</div>`;
-
-            container.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-b border-slate-100 bg-slate-50/50">
-                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i data-lucide="file-up" class="w-5 h-5 text-indigo-500"></i>実績データの追加</h2>
-                        <p class="text-sm text-slate-500 mt-1">新しい確定申告書のPDFをアップロードしてデータを抽出します</p>
-                    </div>
-                    <div class="p-6">${topHtml}</div>
+                <div style="background:var(--bll);border:1px solid #B8D4EF;border-radius:9px;padding:11px 13px;">
+                  <div style="font-size:10px;font-weight:700;color:var(--bl);margin-bottom:3px;">住民税（概算）</div>
+                  <div style="font-size:19px;font-weight:900;font-family:var(--mono);color:var(--bl);" id="rrt">¥0</div>
+                  <div style="font-size:10px;color:var(--bl);opacity:.7;margin-top:2px;">所得割10%＋均等割5,000円</div>
                 </div>
-                <div>
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 px-1">登録済みデータ一覧</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${listHtml}</div>
+              </div>
+              <div id="fsec" style="display:none;">
+                <div class="fb" style="margin-top:14px;">
+                  <h4>📐 所得税の計算根拠（超過累進税率）</h4>
+                  <div class="fr"><span class="frl">課税所得</span><span class="frv" id="ftxi">0円</span></div>
+                  <div class="fr"><span class="frl">適用税率</span><span class="frv" id="frate">0%</span></div>
+                  <div class="fr"><span class="frl">速算控除額</span><span class="frv" id="fspd">0円</span></div>
+                  <div class="fr"><span class="frl">所得税（速算前）</span><span class="frv" id="fbase">0円</span></div>
+                  <div class="fr"><span class="frl">復興特別所得税（×1.021）</span><span class="frv" id="ffuk">0円</span></div>
+                  <div class="fr"><span class="frl">最終 所得税額</span><span class="frv" id="ffin">0円</span></div>
                 </div>
-            `;
-            lucide.createIcons();
-        }
+                <div class="fb" style="margin-top:10px;">
+                  <h4>📐 給与所得控除の計算根拠</h4>
+                  <div class="fr"><span class="frl">給与収入</span><span class="frv" id="fsr">0円</span></div>
+                  <div class="fr"><span class="frl">給与所得控除額</span><span class="frv" id="fsyc">0円</span></div>
+                  <div class="fr"><span class="frl">給与所得</span><span class="frv" id="fsi">0円</span></div>
+                </div>
+                <div class="fb" style="margin-top:10px;">
+                  <h4>📐 住民税の計算根拠</h4>
+                  <div style="font-size:11px;color:var(--txs);line-height:1.65;">
+                    課税所得（社保・他控除差引後）× 10%（所得割）＋ 5,000円（均等割）<br>
+                    ※住民税の基礎控除は43万円（所得税の48万円とは異なります）
+                  </div>
+                </div>
+                <div class="al ai" style="margin-top:10px;font-size:11px;">
+                  <span class="aico">ℹ️</span>
+                  <div><strong>所得税の速算表（超過累進税率）</strong><br>
+                  195万以下→5%｜195〜330万→10%(控除97,500)｜330〜695万→20%(控除427,500)<br>
+                  695〜900万→23%(控除636,000)｜900〜1,800万→33%(控除1,536,000)<br>
+                  1,800〜4,000万→40%(控除2,796,000)｜4,000万超→45%(控除4,796,000)<br>
+                  ※確定税額に復興特別所得税（×1.021）を乗じます</div>
+                </div>
+              </div>
+              <div class="stip" id="stip" style="display:none;"><div class="tico">💡</div><div id="stipt"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        function handleFileSelect(e) {
-            if (!e.target.files.length) return;
-            dmState.step = 'processing';
-            renderDataManager();
-            
-            setTimeout(() => {
-                dmState.editYearKey = '2023';
-                dmState.editData = {
-                    year: '2023年度 (令和5年分)',
-                    businessRev: 1540000, salaryRev: 3100000, totalRev: 4640000,
-                    expenses: 820000, socialIns: 580000, incomeTax: 45000, deductions: 1450000,
-                    revenueDetails: [{ name: '既存クライアントA', amount: 1000000 }, { name: '新規クライアントB', amount: 540000 }],
-                    expenseDetails: [{ name: '接待交際費', amount: 400000 }, { name: '消耗品費', amount: 200000 }, { name: 'その他', amount: 220000 }]
-                };
-                dmState.step = 'review';
-                renderDataManager();
-            }, 2000);
-        }
+    <!-- DEDUCTIONS -->
+    <div class="view" id="vded">
+      <div class="ph"><h1>💰 控除ガイド</h1><p>活用できる控除の一覧。クリックするとシミュレーターに反映できます</p></div>
+      <div class="al ai" style="margin-bottom:18px;"><span class="aico">ℹ️</span><div><strong>基礎控除（480,000円）</strong>と<strong>青色申告特別控除（650,000円）</strong>はシミュレーターに自動で適用されています。</div></div>
+      <div id="dgcont"></div>
+    </div>
 
-        function syncEdit(field, val) {
-            dmState.editData[field] = Number(val) || 0;
-            dmState.editData.totalRev = dmState.editData.businessRev + dmState.editData.salaryRev;
-        }
+    <!-- DATA MANAGE -->
+    <div class="view" id="vdm">
+      <div class="ph"><h1>📁 データ管理</h1><p>確定申告データの追加・編集・削除ができます</p></div>
+      <div class="al as" style="margin-bottom:18px;">
+        <span class="aico">🔒</span>
+        <div><strong>プライバシーについて</strong> — アップロードされたデータは<strong>このブラウザ内でのみ処理</strong>されます。外部サーバーへの送信は一切行われません。ページを閉じると全データは完全に消去されます。安心してご利用ください。</div>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <div class="ch"><h3>📤 新規データの追加</h3></div>
+        <div class="cb">
+          <div id="uwrap">
+            <div class="uz" id="uz"
+              ondragover="event.preventDefault();this.classList.add('ov')"
+              ondragleave="this.classList.remove('ov')"
+              ondrop="hDrop(event)"
+              onclick="document.getElementById('finp').click()">
+              <div class="uico">📄</div>
+              <h3>確定申告書PDFをドラッグ＆ドロップ</h3>
+              <p>クリックしてファイルを選択（または手動入力）</p>
+              <input type="file" id="finp" accept=".pdf" style="display:none;" onchange="hFile()">
+            </div>
+            <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+              <button class="btn bo" onclick="openEntry(null)">✏️ 手動でデータを入力する</button>
+              <button class="btn bg" onclick="loadSample()">📋 サンプルデータで試す</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><h3>📋 登録済みデータ一覧</h3><span style="font-size:11px;color:var(--txs);" id="dlcnt">0件</span></div>
+        <div id="dlbdy">
+          <div class="es" style="padding:40px 20px;"><div class="ei">📂</div><h3>データがありません</h3><p>上から追加してください</p></div>
+        </div>
+      </div>
+    </div>
 
-        function dmCancel() {
-            dmState = { step: 'idle', editYearKey: '', editData: null };
-            renderDataManager();
-        }
+    <!-- GUIDE -->
+    <div class="view" id="vg">
+      <div class="ph"><h1>📖 使い方ガイド</h1><p>確定申告ナビの基本的な使い方を説明します</p></div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="ch"><h3>🚀 基本の流れ</h3></div>
+            <div class="cb">
+              <div class="gs"><div class="gsn">1</div><div><div class="gst">データを登録する</div><div class="gsd">「データ管理」ページから確定申告データを入力します。PDFアップロードか手動入力が選べます。</div></div></div>
+              <div class="gs"><div class="gsn">2</div><div><div class="gst">振り返りレポートで分析</div><div class="gsd">収入・経費・税金のKPIカードとグラフが自動表示されます。前年比較も一目でわかります。</div></div></div>
+              <div class="gs"><div class="gsn">3</div><div><div class="gst">シミュレーターで試算</div><div class="gsd">今年の見込み額をスライダーで入力してリアルタイムに税額を試算。「計算式を表示」ボタンで算出根拠も確認できます。</div></div></div>
+              <div class="gs"><div class="gsn">4</div><div><div class="gst">控除を活用して節税</div><div class="gsd">「控除ガイド」で使える控除をチェックし、シミュレーターに反映して節税効果を確認しましょう。</div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h3>🔒 プライバシーポリシー</h3></div>
+            <div class="cb">
+              <div class="al as"><span class="aico">✅</span>
+                <div style="font-size:12px;line-height:1.7;"><strong>データは外部送信されません。</strong><br>全処理はブラウザ内のJavaScriptのみで行われます。入力した収入・経費・税金情報が外部サーバーに送られることは一切ありません。ページを閉じるかリロードするとデータは完全に消去されます。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="ch"><h3>📐 計算方法について</h3></div>
+            <div class="cb" style="font-size:12px;line-height:1.75;color:var(--txs);">
+              <p style="font-weight:700;color:var(--tx);margin-bottom:6px;">給与所得控除（国税庁の速算表）</p>
+              <p>給与収入に応じて控除額が変わります。例：給与300万円 → 300万×30%+8万=98万円控除 → 給与所得202万円</p>
+              <div style="margin:10px 0 14px;border-left:2px solid var(--pt);padding-left:10px;font-family:var(--mono);font-size:11px;">
+                〜162.5万：55万円控除<br>〜180万：収入×40%−10万<br>〜360万：収入×30%+8万<br>〜660万：収入×20%+44万<br>〜850万：収入×10%+110万<br>850万超：195万円（上限）
+              </div>
+              <p style="font-weight:700;color:var(--tx);margin-bottom:6px;">所得税（超過累進税率）</p>
+              <p>課税所得が高くなるほど税率が上がります。ただし、全体に高い税率がかかるのではなく、各区間を超えた部分のみに高い税率が適用されます。</p>
+              <div style="margin:10px 0 14px;border-left:2px solid var(--rdl);padding-left:10px;font-family:var(--mono);font-size:11px;">
+                〜195万：5%｜〜330万：10%(控除97,500)<br>〜695万：20%(控除427,500)｜〜900万：23%(控除636,000)<br>〜1,800万：33%(控除1,536,000)｜〜4,000万：40%(控除2,796,000)<br>4,000万超：45%(控除4,796,000)
+              </div>
+              <p style="font-weight:700;color:var(--tx);margin-bottom:6px;">住民税（概算）</p>
+              <p>所得割（課税所得×10%）＋均等割（5,000円）で算出。基礎控除は43万円（所得税の48万円とは異なります）。</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><h3>⚠️ 免責事項</h3></div>
+            <div class="cb">
+              <div class="al aw"><span class="aico">⚠️</span><div style="font-size:12px;line-height:1.7;">このツールは<strong>概算計算</strong>を目的としており、実際の申告額とは異なる場合があります。正確な税額は税理士または最寄りの税務署にご確認ください。住宅ローン控除等の税額控除は考慮されていません。</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        function dmSave() {
-            if (dmState.editYearKey) {
-                pastData[dmState.editYearKey] = dmState.editData;
-            }
-            dmState = { step: 'idle', editYearKey: '', editData: null };
-            renderDataManager();
-        }
+  </div>
+</div>
+</div>
 
-        function dmDelete(yearKey) {
-            if (confirm(`${yearKey}年度のデータを削除しますか？`)) {
-                delete pastData[yearKey];
-                renderDataManager();
-            }
-        }
+<!-- MODAL: stat detail -->
+<div class="ov2" id="mo1" onclick="if(event.target===this)closeMo1()">
+  <div class="mb"><div class="mh"><h3 id="mo1t">詳細</h3><button class="mc" onclick="closeMo1()">✕</button></div><div class="mbdy" id="mo1b"></div></div>
+</div>
 
-        // === 初期化処理 ===
-        window.addEventListener('DOMContentLoaded', () => {
-            switchTab('dashboard');
-        });
-    </script>
+<!-- MODAL: data entry -->
+<div class="ov2" id="mo2" onclick="if(event.target===this)closeMo2()" style="--max:580px">
+  <div class="mb" style="max-width:580px;">
+    <div class="mh"><h3 id="mo2t">データを入力</h3><button class="mc" onclick="closeMo2()">✕</button></div>
+    <div class="mbdy">
+      <div class="fgrid" style="margin-bottom:14px;">
+        <div class="fg"><label class="fl">年度（数字）</label><input class="fi" type="number" id="ey" placeholder="2025"></div>
+        <div class="fg"><label class="fl">表示ラベル</label><input class="fi" type="text" id="elbl" placeholder="2025年度（令和7年分）"></div>
+      </div>
+      <div class="fgrid">
+        <div class="fg"><label class="fl">事業売上合計（円）</label><input class="fi" type="number" id="ebr" placeholder="0"></div>
+        <div class="fg"><label class="fl">給与収入合計（円）</label><input class="fi" type="number" id="esr" placeholder="0"></div>
+        <div class="fg"><label class="fl">事業経費合計（円）</label><input class="fi" type="number" id="eex" placeholder="0"></div>
+        <div class="fg"><label class="fl">社会保険料等（円）</label><input class="fi" type="number" id="esc" placeholder="0"></div>
+        <div class="fg"><label class="fl">算出所得税（円）</label><input class="fi" type="number" id="etx" placeholder="0"></div>
+        <div class="fg"><label class="fl">各種控除合計（円）</label><input class="fi" type="number" id="edd" placeholder="0"></div>
+      </div>
+      <div style="border-top:1px solid var(--bdr);padding-top:12px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:700;color:var(--txs);margin-bottom:7px;">📋 売上先の内訳（任意）</div>
+        <div id="errs"></div>
+        <button class="btn bg" style="font-size:12px;" onclick="addRR()">＋ 売上先を追加</button>
+      </div>
+      <div style="border-top:1px solid var(--bdr);padding-top:12px;margin-top:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--txs);margin-bottom:7px;">📋 経費の内訳（任意）</div>
+        <div id="eers"></div>
+        <button class="btn bg" style="font-size:12px;" onclick="addER()">＋ 経費項目を追加</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;border-top:1px solid var(--bdr);padding-top:14px;">
+        <button class="btn bo" onclick="closeMo2()">キャンセル</button>
+        <button class="btn bp" onclick="saveEntry()">💾 保存する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ded picker -->
+<div class="ov2" id="mo3" onclick="if(event.target===this)closeMo3()">
+  <div class="mb" style="max-width:540px;"><div class="mh"><h3>💰 控除を選んで追加</h3><button class="mc" onclick="closeMo3()">✕</button></div><div class="mbdy" id="mo3b"></div></div>
+</div>
+
+<script>
+/* DATA */
+let db={};
+const DEDS=[
+  {cat:'自動適用（変更不可）',auto:true,items:[
+    {id:'basic',name:'基礎控除',amount:480000,max:'480,000円',desc:'全員に適用される基本的な控除（所得2,400万円以下）'},
+    {id:'blue',name:'青色申告特別控除',amount:650000,max:'650,000円',desc:'e-Tax申告で65万円。帳簿付け要件あり'}
+  ]},
+  {cat:'社会保険・医療',items:[
+    {id:'soc',name:'社会保険料控除',max:'全額',desc:'国民年金・国健保など全額控除。社保欄が自動適用されます',popular:true},
+    {id:'med',name:'医療費控除',max:'200万円上限',desc:'年間10万円超の医療費（または所得5%超）。領収書保管が必要',amount:100000,popular:true},
+    {id:'ideco',name:'iDeCo（個人型DC）',max:'掛金全額（月最大6.8万）',desc:'掛金全額が所得控除。節税効果が非常に高い',amount:816000,popular:true}
+  ]},
+  {cat:'家族・生命保険',items:[
+    {id:'life',name:'生命保険料控除',max:'120,000円',amount:120000,desc:'一般・介護医療・個人年金の3種で最大4万円ずつ合計12万円'},
+    {id:'spouse',name:'配偶者控除',max:'380,000円',amount:380000,desc:'配偶者の所得が48万円以下。申告者所得900万円以下なら38万円'},
+    {id:'dep',name:'扶養控除',max:'63万円/人（19〜22歳）',amount:380000,desc:'16歳以上の扶養親族1人につき38万円（19〜22歳は63万円）'},
+    {id:'dis',name:'障害者控除',max:'750,000円',amount:270000,desc:'障害者手帳をお持ちの方。特別障害者は75万円'}
+  ]},
+  {cat:'住宅・寄附',items:[
+    {id:'fst',name:'ふるさと納税（寄附金控除）',max:'所得に応じる',desc:'自己負担2,000円を超える寄付額が控除対象',amount:50000,popular:true},
+    {id:'eqk',name:'地震保険料控除',max:'50,000円',amount:50000,desc:'地震保険料の全額（最大5万円）'}
+  ]},
+  {cat:'その他',items:[
+    {id:'sm',name:'セルフメディケーション税制',max:'88,000円上限',desc:'指定市販薬1.2万円超の場合（医療費控除と選択制）',amount:50000},
+    {id:'sp',name:'ひとり親控除',max:'350,000円',amount:350000,desc:'ひとり親の方は35万円。寡婦控除は27万円'}
+  ]}
+];
+
+/* STATE */
+let ay=null;
+let sim={bRev:0,sRev:0,exp:0,soc:0,otherDed:0};
+let aiOn=true,showF=false;
+let selD=[];
+let erc=0,eec=0;
+let prefill=false;
+
+/* UTILS */
+const fmt=n=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n||0);
+const fmtS=n=>{const a=Math.abs(n||0);if(a>=1e8)return`${(n/1e8).toFixed(1)}億`;if(a>=1e4)return`${Math.round(n/1e4)}万`;return String(Math.round(n));};
+const pct=(a,b)=>b>0?((a/b)*100).toFixed(1):'0.0';
+
+/* NAV */
+const VTITLES={d:'振り返りレポート',a:'全期間分析',s:'税額シミュレーター',ded:'控除ガイド',dm:'データ管理',g:'使い方ガイド'};
+function go(id,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('v'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  document.getElementById('tttl').textContent=VTITLES[id]||id;
+  closeSb();
+  if(id==='d')rDash();
+  if(id==='a')rAll();
+  if(id==='s')initSim();
+  if(id==='ded')rDedG();
+  if(id==='dm')rDM();
+}
+function toggleSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('sbo').classList.toggle('open');}
+function closeSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbo').classList.remove('open');}
+function updBdg(){document.getElementById('sbcnt').textContent=Object.keys(db).length;}
+
+/* SAMPLE */
+function loadSample(){
+  if(!confirm('サンプルデータ（2024年・2025年）を読み込みます。\n\n※ページを閉じると消去されます。'))return;
+  db={
+    2024:{year:'2024年度（令和6年分）',businessRev:1768504,salaryRev:3590579,totalRev:5359083,expenses:969159,socialIns:795697,incomeTax:50100,deductions:1578697,
+      revenueDetails:[{name:'(有)フクヤフドウサン',amount:702504},{name:'(株)ライズDW',amount:516000},{name:'(株)ハラヤ',amount:250000},{name:'アルファ・マテリア',amount:275000},{name:'その他',amount:25000}],
+      expenseDetails:[{name:'減価償却費',amount:368600},{name:'接待交際費',amount:310311},{name:'通信費',amount:69271},{name:'消耗品費',amount:11030},{name:'その他',amount:209947}]},
+    2025:{year:'2025年度（令和7年分）',businessRev:1983285,salaryRev:3023616,totalRev:5006901,expenses:397203,socialIns:434009,incomeTax:68600,deductions:1597749,
+      revenueDetails:[{name:'山田 亮平',amount:780000},{name:'(有)フクヤフドウサン',amount:746285},{name:'(株)ハラヤ',amount:300000},{name:'アルファ・マテリア',amount:125000},{name:'その他',amount:32000}],
+      expenseDetails:[{name:'接待交際費',amount:254962},{name:'消耗品費',amount:33090},{name:'通信費',amount:6484},{name:'その他',amount:102667}]}
+  };
+  ay=2025;updBdg();go('d',document.getElementById('nav-d'));
+}
+
+/* DASH */
+function rDash(){
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);
+  if(!yrs.length){document.getElementById('dcont').innerHTML=`<div class="es"><div class="ei">📂</div><h3>データがありません</h3><p>「データ管理」から確定申告データを追加してください</p><div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;"><button class="btn bp" onclick="go('dm',document.getElementById('nav-dm'))">📁 データを追加</button><button class="btn bo" onclick="loadSample()">📋 サンプルで試す</button></div></div>`;return;}
+  if(!yrs.includes(ay))ay=yrs[0];
+  const d=db[ay],pyr=yrs.find(y=>y<ay),dp=pyr?db[pyr]:null;
+  document.getElementById('dh1').textContent=`${ay}年度 振り返りレポート`;
+  document.getElementById('dsub').textContent=dp?`前年（${pyr}年）との比較分析です`:'データが1年分のみです';
+  document.getElementById('ytabs').innerHTML=yrs.map(y=>`<button class="ytab ${y===ay?'active':''}" onclick="ay=${y};rDash()">${y}年</button>`).join('');
+  const rt=estRT(d),tt=d.incomeTax+rt,net=d.totalRev-d.expenses-d.socialIns-tt;
+  const cs=[{k:'totalRev',l:'総収入',v:d.totalRev,pv:dp?.totalRev,c:'var(--p)',ico:'💼',cost:false},
+    {k:'expenses',l:'事業経費',v:d.expenses,pv:dp?.expenses,c:'var(--am)',ico:'📋',cost:true},
+    {k:'socialIns',l:'社会保険料等',v:d.socialIns,pv:dp?.socialIns,c:'var(--bl)',ico:'🏛️',cost:true},
+    {k:'incomeTax',l:'所得税',v:d.incomeTax,pv:dp?.incomeTax,c:'var(--rd)',ico:'💳',cost:true}];
+  const kh=cs.map(c=>{
+    let dh=`<span class="kd fl">前年データなし</span>`;
+    if(c.pv!==undefined){const df=c.v-c.pv,p=((df/c.pv)*100).toFixed(1),gd=c.cost?df<0:df>0,cl=gd?'up':df===0?'fl':'dn',sg=df>0?'+':'';dh=`<span class="kd ${cl}">${gd?'▲':'▼'} ${sg}${p}% (${sg}${fmtS(df)})</span>`;}
+    return `<div class="kc" style="--cc:${c.c};" onclick="openMo1('${c.k}')"><div class="kl">${c.ico} ${c.l}</div><div class="kv">${fmtS(c.v)}</div>${dh}<div class="kf">${fmt(c.v)}</div></div>`;
+  }).join('');
+  const segs=[{l:'手取り',v:Math.max(0,net),c:'#12A876'},{l:'経費',v:d.expenses,c:'var(--am)'},{l:'社保',v:d.socialIns,c:'var(--bl)'},{l:'税金',v:tt,c:'var(--rd)'}];
+  const bh=segs.map(s=>{const w=pct(s.v,d.totalRev);return`<div class="bseg" style="width:${w}%;background:${s.c};" title="${s.l}: ${fmt(s.v)}">${parseFloat(w)>8?s.l:''}</div>`;}).join('');
+  const lh=segs.map(s=>`<div class="bleg-i"><div class="bdot" style="background:${s.c}"></div>${s.l} (${pct(s.v,d.totalRev)}%)</div>`).join('');
+  const exR=(d.expenseDetails||[]).sort((a,b)=>b.amount-a.amount).map((e,i)=>{const p=pct(e.amount,d.expenses);return`<tr><td><span class="rb ${['r1','r2','r3'][i]||''}">${i+1}</span></td><td>${e.name}</td><td class="nm">${fmt(e.amount)}</td><td style="width:90px;"><div class="pb"><div class="pf" style="width:${p}%;background:var(--am)"></div></div><div style="font-size:10px;color:var(--txh);text-align:right;">${p}%</div></td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--txh);">内訳データなし</td></tr>';
+  const rvR=(d.revenueDetails||[]).sort((a,b)=>b.amount-a.amount).map((r,i)=>{const p=pct(r.amount,d.businessRev);return`<tr><td><span class="rb ${['r1','r2','r3'][i]||''}">${i+1}</span></td><td>${r.name}</td><td class="nm">${fmt(r.amount)}</td><td style="width:90px;"><div class="pb"><div class="pf" style="width:${p}%;background:var(--p)"></div></div><div style="font-size:10px;color:var(--txh);text-align:right;">${p}%</div></td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--txh);">内訳データなし</td></tr>';
+  const ins=bldIns(d,dp);
+  const insh=ins.map(i=>`<div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;box-shadow:var(--sh);"><div style="width:34px;height:34px;border-radius:9px;background:${i.bg};display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">${i.ico}</div><div><div style="font-size:13px;font-weight:700;margin-bottom:3px;">${i.ttl}</div><div style="font-size:12px;color:var(--txs);line-height:1.65;">${i.txt}</div></div></div>`).join('');
+  document.getElementById('dcont').innerHTML=`
+    <div class="kg">${kh}</div>
+    <div class="card" style="margin-bottom:18px;"><div class="ch"><h3>💹 収入の使途 — 総収入に対する割合</h3></div><div class="cb"><div class="bstack">${bh}</div><div class="bleg">${lh}</div></div></div>
+    <div class="g2" style="margin-bottom:18px;">
+      <div class="card"><div class="ch"><h3>📋 経費の内訳</h3><span style="font-size:11px;color:var(--txs);">合計 ${fmt(d.expenses)}</span></div><div class="cb" style="padding:0 0 8px;"><table class="dt"><thead><tr><th width="32">#</th><th>項目</th><th style="text-align:right;">金額</th><th>割合</th></tr></thead><tbody>${exR}</tbody></table></div></div>
+      <div class="card"><div class="ch"><h3>💼 売上先の内訳</h3><span style="font-size:11px;color:var(--txs);">事業収入 ${fmt(d.businessRev)}</span></div><div class="cb" style="padding:0 0 8px;"><table class="dt"><thead><tr><th width="32">#</th><th>取引先</th><th style="text-align:right;">金額</th><th>割合</th></tr></thead><tbody>${rvR}</tbody></table></div></div>
+    </div>
+    <div class="card"><div class="ch"><h3>💡 AIアドバイス & 来年への提案</h3></div><div class="cb"><div style="display:flex;flex-direction:column;gap:10px;">${insh}</div></div></div>`;
+}
+
+function estRT(d){const si=Math.max(0,cSI(d.salaryRev)),bi=Math.max(0,d.businessRev-d.expenses-650000),t=si+bi;return Math.floor(Math.floor(Math.max(0,t-d.socialIns-430000)/1000)*1000*.10)+5000;}
+function cSI(s){if(s<=1625000)return Math.max(0,s-550000);if(s<=1800000)return s-(s*.4-100000);if(s<=3600000)return s-(s*.3+80000);if(s<=6600000)return s-(s*.2+440000);if(s<=8500000)return s-(s*.1+1100000);return s-1950000;}
+function bldIns(d,dp){
+  const ins=[];
+  const t=d.revenueDetails?.slice().sort((a,b)=>b.amount-a.amount)[0];
+  if(t)ins.push({ico:'🏆',bg:'#FEF9C3',ttl:'メインクライアント',txt:`事業収入トップは「${t.name}」(${fmt(t.amount)})。全体の${pct(t.amount,d.businessRev)}%を占めています。依存度が高い場合は取引先の多様化を検討しましょう。`});
+  if(dp){const rd=d.businessRev-dp.businessRev,ed=d.expenses-dp.expenses;
+    if(rd>0&&ed<0)ins.push({ico:'📈',bg:'var(--gnl)',ttl:'効率が大幅改善！',txt:`売上が${fmt(rd)}増え、かつ経費を${fmt(-ed)}削減しました。利益率が向上しており、非常に効率的な事業運営です。`});
+    else if(rd>0)ins.push({ico:'📈',bg:'var(--pp)',ttl:'売上成長中',txt:`前年比で事業売上が${fmt(rd)}増加しました。引き続き安定した顧客基盤の強化が大切です。`});
+    else if(rd<0)ins.push({ico:'⚠️',bg:'var(--rdl)',ttl:'売上が前年比減少',txt:`前年比で事業売上が${fmt(Math.abs(rd))}減少しています。新規顧客獲得や単価アップの施策を検討しましょう。`});}
+  const te=d.expenseDetails?.slice().sort((a,b)=>b.amount-a.amount).find(e=>!e.name.includes('その他'));
+  if(te)ins.push({ico:'💡',bg:'var(--aml)',ttl:'経費の見直しポイント',txt:`最多経費は「${te.name}」(${fmt(te.amount)})で全体の${pct(te.amount,d.expenses)}%。費用対効果を見直すことで手取りを増やせる可能性があります。`});
+  ins.push({ico:'📅',bg:'var(--pp)',ttl:'来年に向けた節税アドバイス',txt:`今期の経費率は${pct(d.expenses,d.businessRev)}%でした。iDeCoや生命保険料控除など追加できる控除がないか「控除ガイド」をチェックしてみましょう。`});
+  return ins;
+}
+
+/* ALL */
+function rAll(){
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>a-b);
+  const el=document.getElementById('acont');
+  if(yrs.length<2){el.innerHTML=`<div class="es"><div class="ei">📊</div><h3>データが2年分以上必要です</h3><p>「データ管理」から追加してください</p></div>`;return;}
+  const mx=Math.max(...yrs.map(y=>db[y].totalRev));
+  const tb=yrs.map(y=>{const h=Math.round((db[y].totalRev/mx)*110);return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;"><div style="font-size:10px;color:var(--txs);font-family:var(--mono);">${fmtS(db[y].totalRev)}</div><div style="width:100%;height:${h}px;background:var(--p);border-radius:6px 6px 0 0;min-height:4px;"></div><div style="font-size:10px;color:var(--txs);font-family:var(--mono);font-weight:700;">${y}</div></div>`;}).join('');
+  const rks=[['事業売上','businessRev'],['給与収入','salaryRev'],['総収入','totalRev'],['経費','expenses'],['社会保険料','socialIns'],['所得税','incomeTax']];
+  const ck=['expenses','socialIns','incomeTax'];
+  const tr=rks.map(([l,k])=>{const vs=yrs.map(y=>db[y][k]||0),best=ck.includes(k)?Math.min(...vs):Math.max(...vs);return`<tr><td style="font-weight:600;font-size:12px;">${l}</td>${yrs.map(y=>{const v=db[y][k]||0,b=v===best;return`<td class="nm" style="${b?'color:var(--gn);font-weight:900;':''}">${fmt(v)}${b?' ✓':''}</td>`;}).join('')}</tr>`;}).join('');
+  const cms=[['総収入','totalRev','var(--p)'],['経費','expenses','var(--am)'],['社会保険料','socialIns','var(--bl)'],['所得税','incomeTax','var(--rd)']];
+  const ch=cms.map(([l,k,c])=>{const mv=Math.max(...yrs.map(y=>db[y][k]||0));return`<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:var(--txs);margin-bottom:5px;">${l}</div>${yrs.map(y=>{const v=db[y][k]||0,w=mv>0?(v/mv*100).toFixed(1):0;return`<div class="cmr"><div class="cml">${y}</div><div class="cmbw"><div class="cmb" style="width:${w}%;background:${c};"><span>${parseFloat(w)>15?fmtS(v):''}</span></div></div><div class="cmv">${fmtS(v)}</div></div>`;}).join('')}</div>`;}).join('');
+  el.innerHTML=`<div class="card" style="margin-bottom:18px;"><div class="ch"><h3>📊 総収入の推移</h3></div><div class="cb"><div style="display:flex;align-items:flex-end;gap:12px;padding:8px 0;">${tb}</div></div></div>
+    <div class="g2" style="gap:16px;">
+      <div class="card"><div class="ch"><h3>📋 全年度比較表</h3><span style="font-size:11px;color:var(--txs);">✓=最良値</span></div><div class="cb" style="padding:0;overflow-x:auto;"><table class="dt"><thead><tr><th>項目</th>${yrs.map(y=>`<th style="text-align:right;">${y}年</th>`).join('')}</tr></thead><tbody>${tr}</tbody></table></div></div>
+      <div class="card"><div class="ch"><h3>📈 各指標の推移</h3></div><div class="cb">${ch}</div></div>
+    </div>`;
+}
+
+/* SIM */
+function initSim(){updSimUI();calcSim();}
+function loadLatest(){
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);
+  if(!yrs.length){alert('データがありません。先にデータを追加してください。');return;}
+  const d=db[yrs[0]];
+  sim={bRev:d.businessRev,sRev:d.salaryRev,exp:d.expenses,soc:d.socialIns,otherDed:0};
+  aiOn=false;updTogUI();updSimUI();calcSim();
+}
+function resetSim(){
+  sim={bRev:0,sRev:0,exp:0,soc:0,otherDed:0};selD=[];aiOn=true;showF=false;
+  updTogUI();document.getElementById('sdedl').innerHTML='';
+  document.getElementById('fsec').style.display='none';document.getElementById('ftbtn').textContent='計算式を表示';
+  updSimUI();calcSim();
+}
+function toggleAI(){aiOn=!aiOn;updTogUI();if(aiOn)autoEst();}
+function updTogUI(){const t=document.getElementById('aitg');aiOn?t.classList.add('on'):t.classList.remove('on');document.getElementById('aiex').style.display=aiOn?'':'none';document.getElementById('aisc').style.display=aiOn?'':'none';}
+function autoEst(){
+  if(!aiOn)return;
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);
+  let er=0.25;if(yrs.length>0&&db[yrs[0]].businessRev>0)er=db[yrs[0]].expenses/db[yrs[0]].businessRev;
+  sim.exp=Math.round((sim.bRev*er)/10000)*10000;
+  const si=Math.max(0,cSI(sim.sRev)),bi=Math.max(0,sim.bRev-sim.exp-650000),t=si+bi;
+  sim.soc=t>0?Math.min(Math.round((Math.max(0,t-430000)*.10+150000)/10000)*10000,Math.round(t*.25/10000)*10000):50000;
+  updSimUI();calcSim();
+}
+function ss(f,v,m){
+  sim[f]=Number(v)||0;
+  if(m&&(f==='exp'||f==='soc')){aiOn=false;updTogUI();}
+  if(m&&(f==='bRev'||f==='sRev')&&aiOn){autoEst();return;}
+  updSimUI();calcSim();
+}
+function updSimUI(){
+  [['bRev','bRev'],['sRev','sRev'],['exp','exp'],['soc','soc']].forEach(([f,id])=>{
+    const n=document.getElementById('s'+id),r=document.getElementById('r'+id);
+    if(n)n.value=sim[f];if(r)r.value=sim[f];
+  });
+  document.getElementById('soded').value=sim.otherDed||0;
+  document.getElementById('erh').textContent=`経費率: ${sim.bRev>0?((sim.exp/sim.bRev)*100).toFixed(1):0}%（事業売上に対する割合）`;
+}
+function calcSim(){
+  const{bRev,sRev,exp,soc,otherDed}=sim;
+  const si=Math.max(0,cSI(sRev)),syc=sRev-si,bi=Math.max(0,bRev-exp-650000),ti=si+bi;
+  const td=480000+soc+otherDed;let txi=Math.max(0,Math.floor((ti-td)/1000)*1000);
+  let raw=0,rate=0,spd=0;
+  if(txi<=1950000){rate=.05;spd=0;}else if(txi<=3300000){rate=.10;spd=97500;}
+  else if(txi<=6950000){rate=.20;spd=427500;}else if(txi<=9000000){rate=.23;spd=636000;}
+  else if(txi<=18000000){rate=.33;spd=1536000;}else if(txi<=40000000){rate=.40;spd=2796000;}
+  else{rate=.45;spd=4796000;}
+  raw=txi*rate-spd;const fit=Math.floor((raw*1.021)/100)*100;
+  let rti=Math.max(0,Math.floor((ti-soc-otherDed-430000)/1000)*1000);
+  const rt=Math.floor(rti*.10)+5000;
+  const tt=fit+rt,tr=bRev+sRev,net=tr-exp-soc-tt;
+  document.getElementById('rnet').textContent=fmt(net);document.getElementById('rtrev').textContent=fmt(tr);document.getElementById('rttax').textContent=fmt(tt);
+  document.getElementById('rsali').textContent=fmt(si);document.getElementById('rbusi').textContent=fmt(bi);document.getElementById('rtxi').textContent=fmt(txi);
+  document.getElementById('rit').textContent=fmt(fit);document.getElementById('rrt').textContent=fmt(rt);document.getElementById('rdsv').textContent=`－${fmt(soc)}`;
+  document.getElementById('rtrate').textContent=`${(rate*100).toFixed(0)}%`;
+  const or=document.getElementById('rdor');if(otherDed>0){or.style.display='flex';document.getElementById('rdov').textContent=`－${fmt(otherDed)}`;}else or.style.display='none';
+  const segs=[{l:'手取り',v:Math.max(0,net),c:'#12A876'},{l:'経費',v:exp,c:'var(--am)'},{l:'社保',v:soc,c:'var(--bl)'},{l:'税金',v:tt,c:'var(--rd)'}];
+  document.getElementById('simbar').innerHTML=segs.map(s=>{const w=pct(s.v,tr);return`<div class="bseg" style="width:${w}%;background:${s.c};" title="${s.l}: ${fmt(s.v)}">${parseFloat(w)>8?s.l:''}</div>`;}).join('');
+  document.getElementById('simbleg').innerHTML=segs.map(s=>`<div class="bleg-i"><div class="bdot" style="background:${s.c}"></div>${s.l} (${pct(s.v,tr)}%)</div>`).join('');
+  document.getElementById('ftxi').textContent=fmt(txi);document.getElementById('frate').textContent=`${(rate*100).toFixed(0)}%`;
+  document.getElementById('fspd').textContent=`－${fmt(spd)}`;document.getElementById('fbase').textContent=fmt(raw);
+  document.getElementById('ffuk').textContent=fmt(raw*1.021);document.getElementById('ffin').textContent=fmt(fit);
+  document.getElementById('fsr').textContent=fmt(sRev);document.getElementById('fsyc').textContent=`－${fmt(syc)}`;document.getElementById('fsi').textContent=fmt(si);
+  const tip=document.getElementById('stip');
+  if(txi>1950000&&txi<=3300000){tip.style.display='flex';document.getElementById('stipt').textContent='課税所得が195万円超の10%区間です。経費や控除を増やして195万円以下に抑えると税率が5%になり節税効果が大きくなります。';}
+  else if(txi>3300000&&txi<=6950000){tip.style.display='flex';document.getElementById('stipt').textContent='課税所得が20%区間です。iDeCoの掛金増額などで330万円以下に抑えると税率が10%になります。控除ガイドで活用できる控除を確認しましょう。';}
+  else tip.style.display='none';
+}
+function toggleF(){showF=!showF;document.getElementById('fsec').style.display=showF?'block':'none';document.getElementById('ftbtn').textContent=showF?'計算式を隠す':'計算式を表示';}
+
+/* DED GUIDE */
+function rDedG(){
+  document.getElementById('dgcont').innerHTML=DEDS.map(c=>`<div class="dc"><div class="dcttl">${c.cat}</div><div class="dg">${c.items.map(i=>{const ap=selD.some(d=>d.id===i.id),au=c.auto;return`<div class="di ${au?'auto':''} ${ap?'apl':''}" onclick="${au?'':(`addDG('${i.id}')`)}"><div class="dn2">${i.name}</div><div class="dm">${i.amount?`最大 ${fmt(i.amount)}`:`上限: ${i.max||'—'}`}</div><div class="dd">${i.desc}</div>${au?'<span class="dbdg auto">自動適用</span>':''}${ap?'<span class="dbdg apl">適用中 ✓</span>':''}${i.popular&&!au&&!ap?'<span class="dbdg pop">人気</span>':''}</div>`;}).join('')}</div></div>`).join('');
+}
+function addDG(id){
+  if(selD.some(d=>d.id===id)){alert('すでに追加済みです');return;}
+  const it=DEDS.flatMap(c=>c.items).find(i=>i.id===id);if(!it)return;
+  const inp=prompt(`「${it.name}」の控除額を入力してください\n（目安: ${it.max||'—'}）`,it.amount||0);
+  if(inp===null)return;const a=Number(inp)||0;if(a<=0)return;
+  selD.push({id,name:it.name,amount:a});updSelD();rDedG();
+  alert(`✅「${it.name}」をシミュレーターに追加しました！\nシミュレータータブで節税効果を確認できます。`);
+}
+function updSelD(){
+  const tot=selD.reduce((s,d)=>s+d.amount,0);sim.otherDed=tot;
+  const el=document.getElementById('sdedl');
+  if(el)el.innerHTML=selD.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--gnl);border:1px solid #A7E3CB;border-radius:8px;padding:6px 10px;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;color:#064E35;">${d.name}</span><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;font-weight:700;font-family:var(--mono);">－${fmt(d.amount)}</span><button onclick="rmDed('${d.id}')" style="background:none;border:none;color:#064E35;opacity:.5;font-size:13px;cursor:pointer;">✕</button></div></div>`).join('');
+  const ne=document.getElementById('soded');if(ne)ne.value=tot;calcSim();
+}
+function rmDed(id){selD=selD.filter(d=>d.id!==id);updSelD();rDedG();}
+function openDedPicker(){
+  document.getElementById('mo3b').innerHTML=DEDS.filter(c=>!c.auto).map(c=>`<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;color:var(--txs);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">${c.cat}</div>${c.items.map(i=>{const ap=selD.some(d=>d.id===i.id);return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--bdr);border-radius:9px;margin-bottom:5px;background:${ap?'var(--gnl)':'var(--sur)'};"><div><div style="font-size:13px;font-weight:600;">${i.name}${i.popular?' <span class="tag tb">人気</span>':''}</div><div style="font-size:11px;color:var(--txs);">${i.desc.substring(0,42)}…</div></div><button style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;border:1px solid;cursor:pointer;background:${ap?'var(--gnl)':'var(--p)'};color:${ap?'var(--gn)':'#fff'};border-color:${ap?'var(--gn)':'var(--p)'};" onclick="${ap?'':(`pAdd('${i.id}')`)}"> ${ap?'✓済':'追加'}</button></div>`;}).join('')}</div>`).join('');
+  document.getElementById('mo3').classList.add('open');
+}
+function pAdd(id){document.getElementById('mo3').classList.remove('open');addDG(id);}
+function closeMo3(){document.getElementById('mo3').classList.remove('open');}
+
+/* DATA MANAGE */
+function rDM(){
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);updBdg();
+  document.getElementById('dlcnt').textContent=`${yrs.length}件`;
+  const el=document.getElementById('dlbdy');
+  if(!yrs.length){el.innerHTML=`<div class="es" style="padding:40px 20px;"><div class="ei">📂</div><h3>データがありません</h3><p>上から追加してください</p></div>`;return;}
+  el.innerHTML=yrs.map(y=>{const d=db[y];return`<div class="dr"><div class="dry">${y}</div><div class="drst"><div class="drs"><div class="drsl">総収入</div><div class="drsv">${fmtS(d.totalRev)}</div></div><div class="drs"><div class="drsl">経費</div><div class="drsv">${fmtS(d.expenses)}</div></div><div class="drs"><div class="drsl">所得税</div><div class="drsv" style="color:var(--rd);">${fmtS(d.incomeTax)}</div></div></div><div class="dra"><button class="bxs" onclick="openEntry(${y})">編集</button><button class="bxs danger" onclick="delD(${y})">削除</button></div></div>`;}).join('');
+}
+function hDrop(e){e.preventDefault();document.getElementById('uz').classList.remove('ov');simExt();}
+function hFile(){simExt();}
+function simExt(){
+  const w=document.getElementById('uwrap');
+  w.innerHTML=`<div style="text-align:center;padding:36px 20px;"><div class="spn" style="margin-bottom:14px;"></div><div style="font-weight:700;">PDFを解析中...</div><div style="font-size:12px;color:var(--txs);margin-top:4px;">データを自動抽出しています（外部送信なし）</div></div>`;
+  setTimeout(()=>{w.innerHTML=`<div class="al as" style="margin-bottom:14px;"><span class="aico">✅</span><div>解析完了。内容を確認して保存してください。<br><strong>※デモ版：2023年のサンプルデータが仮セットされます</strong></div></div><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn bo" onclick="rDM()">やり直す</button><button class="btn bp" onclick="openEntry('pf')">📋 内容を確認・保存する</button></div>`;},1800);
+}
+function openEntry(yk){
+  prefill=false;erc=0;eec=0;
+  document.getElementById('errs').innerHTML='';document.getElementById('eers').innerHTML='';
+  const flds=['ey','elbl','ebr','esr','eex','esc','etx','edd'];
+  if(yk==='pf'){
+    prefill=true;document.getElementById('mo2t').textContent='2023年データを確認・保存';
+    document.getElementById('ey').value='2023';document.getElementById('elbl').value='2023年度（令和5年分）';
+    document.getElementById('ebr').value='1540000';document.getElementById('esr').value='3100000';
+    document.getElementById('eex').value='820000';document.getElementById('esc').value='580000';
+    document.getElementById('etx').value='45000';document.getElementById('edd').value='1450000';
+  } else if(yk&&db[yk]){
+    const d=db[yk];document.getElementById('mo2t').textContent=`${yk}年度を編集`;
+    document.getElementById('ey').value=yk;document.getElementById('elbl').value=d.year;
+    document.getElementById('ebr').value=d.businessRev;document.getElementById('esr').value=d.salaryRev;
+    document.getElementById('eex').value=d.expenses;document.getElementById('esc').value=d.socialIns;
+    document.getElementById('etx').value=d.incomeTax;document.getElementById('edd').value=d.deductions||0;
+    d.revenueDetails?.forEach(r=>{erc++;const div=mkDR('err'+erc,'era'+erc,r.name,r.amount);document.getElementById('errs').appendChild(div);});
+    d.expenseDetails?.forEach(e=>{eec++;const div=mkDR('eer'+eec,'eea'+eec,e.name,e.amount);document.getElementById('eers').appendChild(div);});
+  } else {document.getElementById('mo2t').textContent='データを手動入力';flds.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
+  document.getElementById('mo2').classList.add('open');
+}
+function mkDR(ni,ai,nv,av){const div=document.createElement('div');div.className='drow';div.innerHTML=`<input class="fi" id="${ni}" value="${nv||''}" placeholder="名称" style="padding:7px 10px;"><input class="fi" type="number" id="${ai}" value="${av||''}" placeholder="金額" style="padding:7px 10px;"><button class="drm" onclick="this.parentElement.remove()">✕</button>`;return div;}
+function addRR(){erc++;document.getElementById('errs').appendChild(mkDR('err'+erc,'era'+erc,'',''));}
+function addER(){eec++;document.getElementById('eers').appendChild(mkDR('eer'+eec,'eea'+eec,'',''));}
+function closeMo2(){document.getElementById('mo2').classList.remove('open');if(prefill)rDM();}
+function saveEntry(){
+  const yr=Number(document.getElementById('ey').value);if(!yr){alert('年度を入力してください');return;}
+  const br=Number(document.getElementById('ebr').value)||0,sr=Number(document.getElementById('esr').value)||0;
+  const rd=[],ed=[];
+  for(let i=1;i<=erc;i++){const n=document.getElementById('err'+i),a=document.getElementById('era'+i);if(n&&a&&n.value)rd.push({name:n.value,amount:Number(a.value)||0});}
+  for(let i=1;i<=eec;i++){const n=document.getElementById('eer'+i),a=document.getElementById('eea'+i);if(n&&a&&n.value)ed.push({name:n.value,amount:Number(a.value)||0});}
+  db[yr]={year:document.getElementById('elbl').value||`${yr}年度`,businessRev:br,salaryRev:sr,totalRev:br+sr,expenses:Number(document.getElementById('eex').value)||0,socialIns:Number(document.getElementById('esc').value)||0,incomeTax:Number(document.getElementById('etx').value)||0,deductions:Number(document.getElementById('edd').value)||0,revenueDetails:rd,expenseDetails:ed};
+  const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);ay=yrs[0];
+  closeMo2();rDM();
+}
+function delD(y){if(!confirm(`${y}年度のデータを削除しますか？`))return;delete db[y];const yrs=Object.keys(db).map(Number).sort((a,b)=>b-a);ay=yrs.length?yrs[0]:null;rDM();}
+
+/* STAT MODAL */
+function openMo1(k){
+  if(!ay)return;const d=db[ay];
+  const ts={totalRev:'💼 総収入の内訳',expenses:'📋 経費の詳細',socialIns:'🏛️ 社会保険料等',incomeTax:'💳 算出所得税'};
+  document.getElementById('mo1t').textContent=ts[k]||'詳細';
+  let h='';
+  if(k==='totalRev')h=`<div class="bdr-row"><span class="bl2">事業収入</span><span class="bv">${fmt(d.businessRev)}</span></div><div class="bdr-row"><span class="bl2">給与収入</span><span class="bv">${fmt(d.salaryRev)}</span></div><div class="bdr-row hl2"><span class="bl2">合計</span><span class="bv">${fmt(d.totalRev)}</span></div>`;
+  else if(k==='expenses')h=(d.expenseDetails||[]).sort((a,b)=>b.amount-a.amount).map(e=>`<div class="bdr-row"><span class="bl2">${e.name}</span><span class="bv">${fmt(e.amount)}</span></div>`).join('')+`<div class="bdr-row hl2"><span class="bl2">合計</span><span class="bv">${fmt(d.expenses)}</span></div>`;
+  else if(k==='socialIns')h=`<div class="al ai" style="margin-bottom:12px;"><span class="aico">ℹ️</span><div>国民年金・国民健康保険などの合算額。全額が社会保険料控除として所得から差し引かれます。</div></div><div class="bdr-row hl2"><span class="bl2">合計</span><span class="bv">${fmt(d.socialIns)}</span></div>`;
+  else if(k==='incomeTax')h=`<div class="al aw" style="margin-bottom:12px;"><span class="aico">⚠️</span><div>住宅ローン控除等の税額控除前の算出税額。復興特別所得税(2.1%)を含みます。</div></div><div class="bdr-row hl2"><span class="bl2">算出所得税額</span><span class="bv">${fmt(d.incomeTax)}</span></div>`;
+  document.getElementById('mo1b').innerHTML=h;document.getElementById('mo1').classList.add('open');
+}
+function closeMo1(){document.getElementById('mo1').classList.remove('open');}
+
+/* INIT */
+window.addEventListener('DOMContentLoaded',()=>{updBdg();rDash();});
+</script>
 </body>
 </html>
