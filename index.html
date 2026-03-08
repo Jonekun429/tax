@@ -1,706 +1,761 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { 
-  Calculator, BarChart3, TrendingUp, TrendingDown, 
-  DollarSign, PieChart, Info, Wallet, 
-  Briefcase, FileText, Landmark, RefreshCcw,
-  UploadCloud, FileUp, CheckCircle, Trash2, Save, Loader2, AlertCircle,
-  MessageSquare, Lightbulb, Award, ChevronRight
-} from 'lucide-react';
-
-// === 初期実績データ (内訳情報を追加) ===
-const initialData = {
-  2024: {
-    year: '2024年度 (令和6年分)',
-    businessRev: 1768504,
-    salaryRev: 3590579,
-    totalRev: 5359083,
-    expenses: 969159,
-    socialIns: 795697, 
-    incomeTax: 50100,
-    deductions: 1578697,
-    revenueDetails: [
-      { name: '(有)フクヤフドウサン', amount: 702504 },
-      { name: '(株)ライズデザインワークス', amount: 516000 },
-      { name: '(株)ハラヤ', amount: 250000 },
-      { name: 'アルファ・マテリア', amount: 275000 },
-      { name: 'その他', amount: 25000 }
-    ],
-    expenseDetails: [
-      { name: '減価償却費', amount: 368600 },
-      { name: '接待交際費', amount: 310311 },
-      { name: '通信費', amount: 69271 },
-      { name: '消耗品費', amount: 11030 },
-      { name: 'その他', amount: 209947 }
-    ]
-  },
-  2025: {
-    year: '2025年度 (令和7年分)',
-    businessRev: 1983285,
-    salaryRev: 3023616,
-    totalRev: 5006901,
-    expenses: 397203,
-    socialIns: 434009, 
-    incomeTax: 68600, 
-    deductions: 1597749,
-    revenueDetails: [
-      { name: '山田 亮平', amount: 780000 },
-      { name: '(有)フクヤフドウサン', amount: 746285 },
-      { name: '(株)ハラヤ', amount: 300000 },
-      { name: 'アルファ・マテリア', amount: 125000 },
-      { name: 'その他', amount: 32000 }
-    ],
-    expenseDetails: [
-      { name: '接待交際費', amount: 254962 },
-      { name: '消耗品費', amount: 33090 },
-      { name: '通信費', amount: 6484 },
-      { name: 'その他', amount: 102667 }
-    ]
-  }
-};
-
-// 数値フォーマッター
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(amount || 0);
-};
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [pastData, setPastData] = useState(initialData);
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
-      {/* ヘッダー */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-indigo-700">
-            <Calculator className="w-6 h-6" />
-            <h1 className="font-bold text-lg sm:text-xl">確定申告ダッシュボード＆シミュレーター</h1>
-          </div>
-          <div className="text-sm text-slate-500 hidden sm:block">
-            <span className="font-medium text-slate-700">赤羽 慶太</span> 様
-          </div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>確定申告ダッシュボード＆シミュレーター</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        blob: "blob 7s infinite",
+                        fadeIn: "fadeIn 0.5s ease-out forwards",
+                        zoomIn: "zoomIn 0.3s ease-out forwards"
+                    },
+                    keyframes: {
+                        blob: {
+                            "0%": { transform: "translate(0px, 0px) scale(1)" },
+                            "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                            "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                            "100%": { transform: "translate(0px, 0px) scale(1)" },
+                        },
+                        fadeIn: {
+                            "0%": { opacity: 0, transform: "translateY(10px)" },
+                            "100%": { opacity: 1, transform: "translateY(0)" }
+                        },
+                        zoomIn: {
+                            "0%": { opacity: 0, transform: "scale(0.95)" },
+                            "100%": { opacity: 1, transform: "scale(1)" }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+        /* スライダーのスタイル微調整 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%;
+            background: currentColor;
+            cursor: pointer;
+            margin-top: -4px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            background: #e2e8f0; /* slate-200 */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
+    <!-- ヘッダー -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-indigo-700">
+                <i data-lucide="calculator" class="w-6 h-6"></i>
+                <h1 class="font-bold text-lg sm:text-xl">確定申告ダッシュボード＆シミュレーター</h1>
+            </div>
+            <div class="text-sm text-slate-500 hidden sm:block">
+                <span class="font-medium text-slate-700">赤羽 慶太</span> 様
+            </div>
         </div>
-      </header>
+    </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 mt-6">
-        {/* タブナビゲーション */}
-        <div className="flex p-1 bg-slate-200/60 rounded-xl mb-6 w-full max-w-2xl mx-auto sm:mx-0 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-              activeTab === 'dashboard' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            過去の振り返り
-          </button>
-          <button
-            onClick={() => setActiveTab('simulator')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-              activeTab === 'simulator' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <PieChart className="w-4 h-4" />
-            今期シミュレーター
-          </button>
-          <button
-            onClick={() => setActiveTab('data')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-              activeTab === 'data' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileUp className="w-4 h-4" />
-            データ追加
-          </button>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 mt-6">
+        <!-- タブナビゲーション -->
+        <div class="flex p-1 bg-slate-200/60 rounded-xl mb-6 w-full max-w-2xl mx-auto sm:mx-0 overflow-x-auto">
+            <button id="btn-dashboard" onclick="switchTab('dashboard')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap bg-white text-indigo-700 shadow-sm">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                過去の振り返り
+            </button>
+            <button id="btn-simulator" onclick="switchTab('simulator')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap text-slate-600 hover:text-slate-900">
+                <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                今期シミュレーター
+            </button>
+            <button id="btn-data" onclick="switchTab('data')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap text-slate-600 hover:text-slate-900">
+                <i data-lucide="file-up" class="w-4 h-4"></i>
+                データ追加
+            </button>
         </div>
 
-        {/* コンテンツルーティング */}
-        {activeTab === 'dashboard' && <Dashboard pastData={pastData} />}
-        {activeTab === 'simulator' && <Simulator pastData={pastData} />}
-        {activeTab === 'data' && <DataManager pastData={pastData} setPastData={setPastData} />}
-      </main>
-    </div>
-  );
-}
+        <!-- コンテンツエリア: ダッシュボード -->
+        <div id="tab-dashboard" class="fade-in block space-y-6"></div>
 
-// === ダッシュボードコンポーネント ===
-function Dashboard({ pastData }) {
-  const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
-  
-  if (years.length === 0) {
-    return (
-      <div className="text-center py-20 animate-in fade-in">
-        <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-600">データがありません</h2>
-        <p className="text-slate-500 mt-2">「データ追加」タブから実績データを追加してください。</p>
-      </div>
-    );
-  }
-
-  const latestYear = years[0];
-  const prevYear = years[1];
-  const dLatest = pastData[latestYear];
-  const dPrev = prevYear ? pastData[prevYear] : null;
-
-  // AIインサイト生成ロジック
-  const generateInsights = (curr, prev) => {
-    const insights = [];
-
-    // 1. 収入の振り返り
-    const topClient = curr.revenueDetails?.sort((a,b) => b.amount - a.amount)[0];
-    if (topClient) {
-      insights.push({
-        type: 'revenue',
-        title: '主な収入源と傾向',
-        icon: Award,
-        color: 'text-amber-600',
-        bg: 'bg-amber-100',
-        text: `今期の事業収入トップは「${topClient.name}」で、${formatCurrency(topClient.amount)}の売上がありました。上位のクライアントから安定した収益を確保できており、事業の軸として育ってきています。`
-      });
-    }
-
-    // 2. 支出対効果 (ROI)
-    if (prev) {
-      if (curr.businessRev > prev.businessRev && curr.expenses < prev.expenses) {
-        insights.push({
-          type: 'efficiency',
-          title: '素晴らしい支出効率の改善！',
-          icon: TrendingUp,
-          color: 'text-emerald-600',
-          bg: 'bg-emerald-100',
-          text: `経費を前年より${formatCurrency(prev.expenses - curr.expenses)}減らしたにも関わらず、事業売上は${formatCurrency(curr.businessRev - prev.businessRev)}増加しています。無駄が省かれ、非常に効率的な事業運営ができています！`
-        });
-      } else if (curr.businessRev > prev.businessRev) {
-        insights.push({
-          type: 'efficiency',
-          title: '順調な売上成長',
-          icon: TrendingUp,
-          color: 'text-emerald-600',
-          bg: 'bg-emerald-100',
-          text: `前年と比べて事業売上が${formatCurrency(curr.businessRev - prev.businessRev)}増加しました。事業拡大のペースが順調です。`
-        });
-      }
-    }
-
-    // 3. 経費の改善アドバイス
-    const topExpense = curr.expenseDetails?.sort((a,b) => b.amount - a.amount).find(e => e.name !== 'その他');
-    if (topExpense) {
-      const expenseRatio = ((topExpense.amount / curr.expenses) * 100).toFixed(1);
-      
-      let advice = '';
-      if (topExpense.name.includes('交際費')) {
-        advice = `経費の中で「${topExpense.name}」が${formatCurrency(topExpense.amount)}と最も多く、経費全体の${expenseRatio}%を占めています。もし不要な会食などがあれば少し減らし、その分を広告宣伝費や、業務効率を上げるためのツール・機材（消耗品費）への投資に回すと、さらに売上アップを狙えるかもしれません。`;
-      } else {
-        advice = `経費の中では「${topExpense.name}」が全体の${expenseRatio}% (${formatCurrency(topExpense.amount)}) を占めています。この項目の費用対効果を見直すことで、さらに手元に残る利益を増やせる可能性があります。`;
-      }
-
-      insights.push({
-        type: 'advice',
-        title: '経費の見直し提案',
-        icon: Lightbulb,
-        color: 'text-indigo-600',
-        bg: 'bg-indigo-100',
-        text: advice
-      });
-    }
-
-    return insights;
-  };
-
-  const insights = generateInsights(dLatest, dPrev);
-
-  const calcDiff = (curr, prev) => {
-    if (prev === null || prev === undefined || prev === 0) return { text: '-', isPositive: true, hasPrev: false };
-    const diff = curr - prev;
-    const isPositive = diff >= 0;
-    return {
-      value: diff,
-      percent: ((diff / prev) * 100).toFixed(1),
-      isPositive,
-      text: `${isPositive ? '+' : ''}${((diff / prev) * 100).toFixed(1)}%`,
-      hasPrev: true
-    };
-  };
-
-  const MetricCard = ({ title, amountCurr, amountPrev, icon: Icon, colorClass }) => {
-    const diff = calcDiff(amountCurr, amountPrev);
-    const isCost = title === '事業経費' || title === '所得税';
-    const trendColor = diff.hasPrev ? (diff.isPositive ? (isCost ? 'text-rose-600' : 'text-emerald-600') : (isCost ? 'text-emerald-600' : 'text-rose-600')) : 'text-slate-400';
-
-    return (
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col relative overflow-hidden">
-        <div className={`absolute top-0 right-0 p-4 opacity-5 ${colorClass}`}>
-          <Icon className="w-16 h-16" />
-        </div>
-        <div className="flex items-center gap-2 text-slate-600 mb-2">
-          <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10`}>
-            <Icon className={`w-4 h-4 ${colorClass.replace('text-', 'text-').replace('bg-', 'text-')}`} />
-          </div>
-          <h3 className="font-semibold text-sm">{title}</h3>
-        </div>
-        <div className="text-2xl font-bold text-slate-800 mb-3">{formatCurrency(amountCurr)}</div>
-        <div className="mt-auto pt-3 border-t border-slate-50 text-xs flex justify-between items-center">
-          <span className="text-slate-500">{prevYear ? `前年比` : '前年データなし'}</span>
-          <span className={`font-medium flex items-center gap-1 ${trendColor}`}>
-            {diff.hasPrev && (diff.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />)}
-            {diff.text}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* ヘッダータイトル */}
-      <div className="mb-2">
-        <h2 className="text-2xl font-bold text-slate-800">{latestYear}年度 振り返りレポート</h2>
-        <p className="text-slate-500 mt-1">
-          {prevYear ? `前年（${prevYear}年度）のデータと比較した分析結果です。` : `アップロードされたデータを分析しています。`}
-        </p>
-      </div>
-
-      {/* AIインサイト セクション */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg overflow-hidden relative">
-        {/* 背景の装飾 */}
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-sky-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-        
-        <div className="relative z-10">
-          <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-indigo-400" />
-            AIからの振り返り・アドバイス
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {insights.map((insight, idx) => (
-              <div key={idx} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 hover:bg-white/15 transition-colors">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-xl ${insight.bg}`}>
-                    <insight.icon className={`w-5 h-5 ${insight.color}`} />
-                  </div>
-                  <h4 className="font-bold text-slate-100">{insight.title}</h4>
+        <!-- コンテンツエリア: シミュレーター (静的HTML) -->
+        <div id="tab-simulator" class="fade-in hidden">
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">今期シミュレーター</h2>
+                    <p class="text-slate-500 mt-1">数値を動かして、税金と手取りの変化を確認しましょう</p>
                 </div>
-                <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                  {insight.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                <button id="sim-copy-btn" onclick="copyLatestToSim()" class="hidden flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <i data-lucide="refresh-ccw" class="w-4 h-4"></i>
+                    <span id="sim-copy-text">最新の実績をセット</span>
+                </button>
+            </div>
 
-      {/* 主要指標カード */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="総収入 (事業+給与)" amountCurr={dLatest.totalRev} amountPrev={dPrev?.totalRev} icon={Briefcase} colorClass="text-blue-600 bg-blue-100" />
-        <MetricCard title="事業経費" amountCurr={dLatest.expenses} amountPrev={dPrev?.expenses} icon={FileText} colorClass="text-orange-600 bg-orange-100" />
-        <MetricCard title="社会保険料等" amountCurr={dLatest.socialIns} amountPrev={dPrev?.socialIns} icon={Landmark} colorClass="text-purple-600 bg-purple-100" />
-        <MetricCard title="所得税" amountCurr={dLatest.incomeTax} amountPrev={dPrev?.incomeTax} icon={DollarSign} colorClass="text-rose-600 bg-rose-100" />
-      </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 入力パネル -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-lg border-b border-slate-100 pb-3 mb-5 flex items-center gap-2">
+                            <i data-lucide="calculator" class="w-5 h-5 text-indigo-500"></i>収入と支出の予定
+                        </h3>
+                        
+                        <!-- 事業売上 -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="font-semibold text-slate-700 text-sm">事業売上（見込）</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="sim-bRev-num" oninput="syncSim('bRev', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <span class="text-sm text-slate-500">円</span>
+                                </div>
+                            </div>
+                            <input type="range" id="sim-bRev-range" min="0" max="10000000" step="10000" oninput="syncSim('bRev', this.value)" class="w-full h-2 rounded-lg text-sky-500">
+                        </div>
 
-      {/* 詳細内訳グラフ群 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* 経費の内訳 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
-            <span className="flex items-center gap-2"><PieChart className="w-5 h-5 text-orange-500" />事業経費の内訳 ({latestYear}年度)</span>
-            <span className="text-sm text-slate-500 font-normal">計: {formatCurrency(dLatest.expenses)}</span>
-          </h3>
-          <div className="space-y-4">
-            {dLatest.expenseDetails?.sort((a,b) => b.amount - a.amount).map((item, idx) => {
-              const ratio = ((item.amount / dLatest.expenses) * 100).toFixed(1);
-              return (
-                <div key={idx}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-slate-700">{item.name}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-500 text-xs">{ratio}%</span>
-                      <span className="font-bold text-slate-800">{formatCurrency(item.amount)}</span>
+                        <!-- 給与収入 -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="font-semibold text-slate-700 text-sm">給与収入（見込）</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="sim-sRev-num" oninput="syncSim('sRev', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <span class="text-sm text-slate-500">円</span>
+                                </div>
+                            </div>
+                            <input type="range" id="sim-sRev-range" min="0" max="10000000" step="10000" oninput="syncSim('sRev', this.value)" class="w-full h-2 rounded-lg text-indigo-500">
+                        </div>
+
+                        <!-- 経費 -->
+                        <div class="relative pt-4 border-t border-slate-100 mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="font-semibold text-slate-700 text-sm">経費の予定・目標</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="sim-exp-num" oninput="syncSim('exp', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <span class="text-sm text-slate-500">円</span>
+                                </div>
+                            </div>
+                            <input type="range" id="sim-exp-range" min="0" step="10000" oninput="syncSim('exp', this.value)" class="w-full h-2 rounded-lg text-orange-500">
+                            <p class="text-xs text-slate-400 mt-1.5" id="sim-exp-help"></p>
+                        </div>
+
+                        <!-- 社会保険料等 -->
+                        <div class="relative pt-4 border-t border-slate-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="font-semibold text-slate-700 text-sm">社会保険料等 支払予定額</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="sim-socialIns-num" oninput="syncSim('socialIns', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <span class="text-sm text-slate-500">円</span>
+                                </div>
+                            </div>
+                            <input type="range" id="sim-socialIns-range" min="0" max="2000000" step="10000" oninput="syncSim('socialIns', this.value)" class="w-full h-2 rounded-lg text-purple-500">
+                            <p class="text-xs text-slate-400 mt-1.5">国民健康保険、国民年金などの年間支払予定額</p>
+                        </div>
                     </div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="bg-orange-400 h-2 rounded-full" style={{ width: `${ratio}%` }}></div>
-                  </div>
-                </div>
-              );
-            })}
-            {(!dLatest.expenseDetails || dLatest.expenseDetails.length === 0) && (
-              <p className="text-sm text-slate-500 text-center py-4">経費の内訳データがありません</p>
-            )}
-          </div>
-        </div>
 
-        {/* 収入の内訳 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
-            <span className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-sky-500" />事業売上トップクライアント ({latestYear}年度)</span>
-            <span className="text-sm text-slate-500 font-normal">計: {formatCurrency(dLatest.businessRev)}</span>
-          </h3>
-          <div className="space-y-4">
-            {dLatest.revenueDetails?.sort((a,b) => b.amount - a.amount).slice(0, 5).map((item, idx) => {
-              const ratio = ((item.amount / dLatest.businessRev) * 100).toFixed(1);
-              return (
-                <div key={idx}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-slate-700 truncate pr-2">{item.name}</span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-slate-500 text-xs">{ratio}%</span>
-                      <span className="font-bold text-slate-800">{formatCurrency(item.amount)}</span>
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3 text-blue-800 text-sm">
+                        <i data-lucide="info" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold mb-1">経費を入力する際のヒント</p>
+                            <p class="text-blue-700/80">経費スライダーを動かして増やすと、右側の「税金」が減りますが、同時に支出も増えるため最終的な「手取り額」がどう変わるか観察してみてください。</p>
+                        </div>
                     </div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="bg-sky-500 h-2 rounded-full" style={{ width: `${ratio}%` }}></div>
-                  </div>
                 </div>
-              );
-            })}
-            {(!dLatest.revenueDetails || dLatest.revenueDetails.length === 0) && (
-              <p className="text-sm text-slate-500 text-center py-4">売上の内訳データがありません</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-// === データ管理・アップロードコンポーネント ===
-function DataManager({ pastData, setPastData }) {
-  const [step, setStep] = useState('idle'); 
-  const [editYearKey, setEditYearKey] = useState('');
-  const [editData, setEditData] = useState(null);
-  const fileInputRef = useRef(null);
+                <!-- 結果パネル -->
+                <div class="lg:col-span-7 space-y-6">
+                    <!-- サマリー -->
+                    <div class="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-8 opacity-10">
+                            <i data-lucide="wallet" class="w-48 h-48"></i>
+                        </div>
+                        <div class="relative z-10">
+                            <p class="text-slate-400 font-medium mb-1">最終的なあなたの手取り額（想定）</p>
+                            <div id="res-netIncome" class="text-4xl sm:text-5xl font-extrabold mb-8 tracking-tight text-emerald-400">¥0</div>
+                            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-slate-700/50">
+                                <div><p class="text-slate-400 text-xs mb-1">総収入</p><p id="res-totalRevenue" class="text-xl font-bold">¥0</p></div>
+                                <div><p class="text-slate-400 text-xs mb-1">税金合計</p><p id="res-totalTaxes" class="text-xl font-bold text-rose-400">¥0</p></div>
+                            </div>
+                        </div>
+                    </div>
 
-  const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
-
-  // ファイルアップロードハンドラ (デモ用モック)
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setStep('processing');
-    
-    // 擬似的なAI解析の待ち時間
-    setTimeout(() => {
-      const mockExtracted = {
-        year: '2023年度 (令和5年分)',
-        businessRev: 1540000,
-        salaryRev: 3100000,
-        totalRev: 4640000,
-        expenses: 820000,
-        socialIns: 580000,
-        incomeTax: 45000,
-        deductions: 1450000,
-        revenueDetails: [
-          { name: '既存クライアントA', amount: 1000000 },
-          { name: '新規クライアントB', amount: 540000 }
-        ],
-        expenseDetails: [
-          { name: '接待交際費', amount: 400000 },
-          { name: '消耗品費', amount: 200000 },
-          { name: 'その他', amount: 220000 }
-        ]
-      };
-      
-      setEditYearKey('2023');
-      setEditData(mockExtracted);
-      setStep('review');
-      
-      if(fileInputRef.current) fileInputRef.current.value = '';
-    }, 2000);
-  };
-
-  const handleChange = (field, value) => {
-    setEditData(prev => {
-      const next = { ...prev, [field]: Number(value) || 0 };
-      if (field === 'businessRev' || field === 'salaryRev') {
-        next.totalRev = next.businessRev + next.salaryRev;
-      }
-      return next;
-    });
-  };
-
-  const handleSave = () => {
-    if (!editYearKey) return;
-    setPastData(prev => ({
-      ...prev,
-      [editYearKey]: editData
-    }));
-    setStep('idle');
-    setEditData(null);
-  };
-
-  const handleDelete = (yearKey) => {
-    if (window.confirm(`${yearKey}年度のデータを削除しますか？`)) {
-      setPastData(prev => {
-        const next = { ...prev };
-        delete next[yearKey];
-        return next;
-      });
-    }
-  };
-
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-      
-      {/* アップロード・抽出エリア */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <FileUp className="w-5 h-5 text-indigo-500" />
-            実績データの追加
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">新しい確定申告書のPDFをアップロードしてデータを抽出します</p>
+                    <!-- 内訳 -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-lg mb-6 border-b border-slate-100 pb-3">計算の内訳</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                <span class="text-slate-600 text-sm font-medium">給与所得 (控除後)</span><span id="res-salaryIncome" class="font-bold">¥0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                <span class="text-slate-600 text-sm font-medium">事業所得 (青色65万控除後)</span><span id="res-businessIncome" class="font-bold">¥0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
+                                <span class="text-indigo-800 text-sm font-bold">課税される所得金額</span><span id="res-taxableIncome" class="font-bold text-indigo-700">¥0</span>
+                            </div>
+                            <div class="pt-4 mt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
+                                <div class="p-4 bg-rose-50 rounded-xl border border-rose-100">
+                                    <p class="text-rose-600 text-xs font-bold mb-1">想定 所得税</p><p id="res-incomeTax" class="text-xl font-extrabold text-rose-700">¥0</p>
+                                </div>
+                                <div class="p-4 bg-rose-50 rounded-xl border border-rose-100">
+                                    <p class="text-rose-600 text-xs font-bold mb-1">想定 住民税</p><p id="res-residentTax" class="text-xl font-extrabold text-rose-700">¥0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- グラフ -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-sm text-slate-700 mb-4">お金の行方グラフ（総収入に対する割合）</h3>
+                        <div class="h-8 w-full rounded-full overflow-hidden flex bg-slate-100">
+                            <div id="bar-net" class="bg-emerald-400 flex items-center justify-center text-xs font-bold text-slate-900 overflow-hidden" title="手取り" style="width: 0%">手取り</div>
+                            <div id="bar-exp" class="bg-orange-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="経費" style="width: 0%">経費</div>
+                            <div id="bar-soc" class="bg-purple-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="社会保険料" style="width: 0%">社保</div>
+                            <div id="bar-tax" class="bg-rose-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="税金" style="width: 0%">税</div>
+                        </div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 justify-center">
+                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-emerald-400"></div>手取り (<span id="lbl-net">0</span>%)</div>
+                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-orange-400"></div>経費 (<span id="lbl-exp">0</span>%)</div>
+                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-purple-400"></div>社保等 (<span id="lbl-soc">0</span>%)</div>
+                            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-rose-500"></div>税金 (<span id="lbl-tax">0</span>%)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div className="p-6">
-          {step === 'idle' && (
-            <div 
-              className="border-2 border-dashed border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 group"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                <UploadCloud className="w-8 h-8 text-indigo-500" />
-              </div>
-              <p className="text-indigo-900 font-bold text-lg mb-1">確定申告書(PDF)をアップロード</p>
-              <p className="text-indigo-600/70 text-sm">クリックしてファイルを選択（デモ: 2023年データが抽出されます）</p>
-              <input type="file" className="hidden" ref={fileInputRef} accept=".pdf,.json" onChange={handleFileSelect} />
-            </div>
-          )}
+        <!-- コンテンツエリア: データ管理 -->
+        <div id="tab-data" class="fade-in hidden space-y-8"></div>
+    </main>
 
-          {step === 'processing' && (
-            <div className="py-16 text-center">
-              <Loader2 className="w-12 h-12 text-indigo-500 mx-auto animate-spin mb-4" />
-              <h3 className="text-lg font-bold text-slate-700">AIがPDFを解析中...</h3>
-              <p className="text-sm text-slate-500 mt-2">売上や経費の内訳を自動で抽出・分析しています</p>
-            </div>
-          )}
+    <script>
+        // === ユーティリティ ===
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(amount || 0);
+        };
 
-          {step === 'review' && editData && (
-            <div className="animate-in fade-in zoom-in-95 duration-300">
-              <div className="flex items-center gap-2 mb-6 text-emerald-600 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-bold">データの抽出が完了しました。内容を確認して保存してください。</span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
+        // === データ構造 ===
+        let pastData = {
+            2024: {
+                year: '2024年度 (令和6年分)',
+                businessRev: 1768504,
+                salaryRev: 3590579,
+                totalRev: 5359083,
+                expenses: 969159,
+                socialIns: 795697, 
+                incomeTax: 50100,
+                deductions: 1578697,
+                revenueDetails: [
+                    { name: '(有)フクヤフドウサン', amount: 702504 },
+                    { name: '(株)ライズデザインワークス', amount: 516000 },
+                    { name: '(株)ハラヤ', amount: 250000 },
+                    { name: 'アルファ・マテリア', amount: 275000 },
+                    { name: 'その他', amount: 25000 }
+                ],
+                expenseDetails: [
+                    { name: '減価償却費', amount: 368600 },
+                    { name: '接待交際費', amount: 310311 },
+                    { name: '通信費', amount: 69271 },
+                    { name: '消耗品費', amount: 11030 },
+                    { name: 'その他', amount: 209947 }
+                ]
+            },
+            2025: {
+                year: '2025年度 (令和7年分)',
+                businessRev: 1983285,
+                salaryRev: 3023616,
+                totalRev: 5006901,
+                expenses: 397203,
+                socialIns: 434009, 
+                incomeTax: 68600, 
+                deductions: 1597749,
+                revenueDetails: [
+                    { name: '山田 亮平', amount: 780000 },
+                    { name: '(有)フクヤフドウサン', amount: 746285 },
+                    { name: '(株)ハラヤ', amount: 300000 },
+                    { name: 'アルファ・マテリア', amount: 125000 },
+                    { name: 'その他', amount: 32000 }
+                ],
+                expenseDetails: [
+                    { name: '接待交際費', amount: 254962 },
+                    { name: '消耗品費', amount: 33090 },
+                    { name: '通信費', amount: 6484 },
+                    { name: 'その他', amount: 102667 }
+                ]
+            }
+        };
+
+        // === タブ切り替えロジック ===
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'simulator', 'data'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`btn-${t}`);
+                if(t === tabId) {
+                    el.classList.remove('hidden');
+                    btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
+                    btn.classList.remove('text-slate-600', 'hover:text-slate-900');
+                } else {
+                    el.classList.add('hidden');
+                    btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
+                    btn.classList.add('text-slate-600', 'hover:text-slate-900');
+                }
+            });
+
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'simulator') initSimulator();
+            if (tabId === 'data') renderDataManager();
+            
+            // アイコン再描画
+            lucide.createIcons();
+        }
+
+        // === 1. ダッシュボードロジック ===
+        function generateInsights(curr, prev) {
+            const insights = [];
+            // 収入
+            const topClient = curr.revenueDetails?.sort((a,b) => b.amount - a.amount)[0];
+            if (topClient) {
+                insights.push({
+                    title: '主な収入源と傾向', iconName: 'award', color: 'text-amber-600', bg: 'bg-amber-100',
+                    text: `今期の事業収入トップは「${topClient.name}」で、${formatCurrency(topClient.amount)}の売上がありました。上位のクライアントから安定した収益を確保できており、事業の軸として育ってきています。`
+                });
+            }
+            // 支出対効果
+            if (prev) {
+                if (curr.businessRev > prev.businessRev && curr.expenses < prev.expenses) {
+                    insights.push({
+                        title: '素晴らしい支出効率の改善！', iconName: 'trending-up', color: 'text-emerald-600', bg: 'bg-emerald-100',
+                        text: `経費を前年より${formatCurrency(prev.expenses - curr.expenses)}減らしたにも関わらず、事業売上は${formatCurrency(curr.businessRev - prev.businessRev)}増加しています。無駄が省かれ、非常に効率的な事業運営ができています！`
+                    });
+                } else if (curr.businessRev > prev.businessRev) {
+                    insights.push({
+                        title: '順調な売上成長', iconName: 'trending-up', color: 'text-emerald-600', bg: 'bg-emerald-100',
+                        text: `前年と比べて事業売上が${formatCurrency(curr.businessRev - prev.businessRev)}増加しました。事業拡大のペースが順調です。`
+                    });
+                }
+            }
+            // 経費アドバイス
+            const topExpense = curr.expenseDetails?.sort((a,b) => b.amount - a.amount).find(e => e.name !== 'その他');
+            if (topExpense) {
+                const expenseRatio = ((topExpense.amount / curr.expenses) * 100).toFixed(1);
+                let advice = '';
+                if (topExpense.name.includes('交際費')) {
+                    advice = `経費の中で「${topExpense.name}」が${formatCurrency(topExpense.amount)}と最も多く、経費全体の${expenseRatio}%を占めています。もし不要な会食などがあれば少し減らし、その分を広告宣伝費や機材への投資に回すと、さらに売上アップを狙えるかもしれません。`;
+                } else {
+                    advice = `経費の中では「${topExpense.name}」が全体の${expenseRatio}% (${formatCurrency(topExpense.amount)}) を占めています。この項目の費用対効果を見直すことで、手元に残る利益を増やせる可能性があります。`;
+                }
+                insights.push({ title: '経費の見直し提案', iconName: 'lightbulb', color: 'text-indigo-600', bg: 'bg-indigo-100', text: advice });
+            }
+            return insights;
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('tab-dashboard');
+            const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
+            
+            if (years.length === 0) {
+                container.innerHTML = `
+                <div class="text-center py-20 animate-in fade-in">
+                    <i data-lucide="alert-circle" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+                    <h2 class="text-xl font-bold text-slate-600">データがありません</h2>
+                    <p class="text-slate-500 mt-2">「データ追加」タブから実績データを追加してください。</p>
+                </div>`;
+                return;
+            }
+
+            const latestYear = years[0];
+            const prevYear = years[1];
+            const dLatest = pastData[latestYear];
+            const dPrev = prevYear ? pastData[prevYear] : null;
+
+            // インサイト
+            const insights = generateInsights(dLatest, dPrev);
+            const insightsHtml = insights.map(ins => `
+                <div class="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 hover:bg-white/15 transition-colors">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="p-2 rounded-xl ${ins.bg}"><i data-lucide="${ins.iconName}" class="w-5 h-5 ${ins.color}"></i></div>
+                        <h4 class="font-bold text-slate-100">${ins.title}</h4>
+                    </div>
+                    <p class="text-sm text-slate-300 leading-relaxed font-medium">${ins.text}</p>
+                </div>
+            `).join('');
+
+            // カード計算
+            const getDiffHtml = (curr, prev, isCost) => {
+                if (!prev) return `<span class="text-slate-400">前年データなし</span>`;
+                const diff = curr - prev;
+                const isPos = diff >= 0;
+                const percent = ((diff / prev) * 100).toFixed(1);
+                const trendColor = isPos ? (isCost ? 'text-rose-600' : 'text-emerald-600') : (isCost ? 'text-emerald-600' : 'text-rose-600');
+                const icon = isPos ? 'trending-up' : 'trending-down';
+                const sign = isPos ? '+' : '';
+                return `
+                    <span class="text-slate-500">前年比</span>
+                    <span class="font-medium flex items-center gap-1 ${trendColor}">
+                        <i data-lucide="${icon}" class="w-3 h-3"></i> ${sign}${percent}%
+                    </span>
+                `;
+            };
+
+            const card = (title, curr, prev, icon, colorCls, isCost) => `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 ${colorCls}"><i data-lucide="${icon}" class="w-16 h-16"></i></div>
+                    <div class="flex items-center gap-2 text-slate-600 mb-2">
+                        <div class="p-2 rounded-lg ${colorCls} bg-opacity-10"><i data-lucide="${icon}" class="w-4 h-4 ${colorCls}"></i></div>
+                        <h3 class="font-semibold text-sm">${title}</h3>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-800 mb-3">${formatCurrency(curr)}</div>
+                    <div class="mt-auto pt-3 border-t border-slate-50 text-xs flex justify-between items-center">
+                        ${getDiffHtml(curr, prev, isCost)}
+                    </div>
+                </div>
+            `;
+
+            // 詳細グラフ
+            const expDetailsHtml = dLatest.expenseDetails?.sort((a,b)=>b.amount-a.amount).map(item => {
+                const ratio = ((item.amount / dLatest.expenses) * 100).toFixed(1);
+                return `
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">管理年度 (西暦)</label>
-                  <input type="number" value={editYearKey} onChange={e => setEditYearKey(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2 font-medium" />
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700">${item.name}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-500 text-xs">${ratio}%</span>
+                            <span class="font-bold text-slate-800">${formatCurrency(item.amount)}</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-orange-400 h-2 rounded-full" style="width: ${ratio}%"></div>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-sm text-slate-500 text-center py-4">データがありません</p>';
+
+            const revDetailsHtml = dLatest.revenueDetails?.sort((a,b)=>b.amount-a.amount).slice(0,5).map(item => {
+                const ratio = ((item.amount / dLatest.businessRev) * 100).toFixed(1);
+                return `
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700 truncate pr-2">${item.name}</span>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="text-slate-500 text-xs">${ratio}%</span>
+                            <span class="font-bold text-slate-800">${formatCurrency(item.amount)}</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-sky-500 h-2 rounded-full" style="width: ${ratio}%"></div>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-sm text-slate-500 text-center py-4">データがありません</p>';
+
+            container.innerHTML = `
+                <div class="mb-2">
+                    <h2 class="text-2xl font-bold text-slate-800">${latestYear}年度 振り返りレポート</h2>
+                    <p class="text-slate-500 mt-1">${prevYear ? `前年（${prevYear}年度）のデータと比較した分析結果です。` : `アップロードされたデータを分析しています。`}</p>
+                </div>
+
+                <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg overflow-hidden relative">
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                    <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-sky-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" style="animation-delay: 2s"></div>
+                    <div class="relative z-10">
+                        <h3 class="font-bold text-xl mb-6 flex items-center gap-2">
+                            <i data-lucide="message-square" class="w-6 h-6 text-indigo-400"></i>
+                            AIからの振り返り・アドバイス
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${insightsHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    ${card('総収入 (事業+給与)', dLatest.totalRev, dPrev?.totalRev, 'briefcase', 'text-blue-600', false)}
+                    ${card('事業経費', dLatest.expenses, dPrev?.expenses, 'file-text', 'text-orange-600', true)}
+                    ${card('社会保険料等', dLatest.socialIns, dPrev?.socialIns, 'landmark', 'text-purple-600', true)}
+                    ${card('所得税', dLatest.incomeTax, dPrev?.incomeTax, 'dollar-sign', 'text-rose-600', true)}
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-orange-500"></i>事業経費の内訳</span>
+                            <span class="text-sm text-slate-500 font-normal">計: ${formatCurrency(dLatest.expenses)}</span>
+                        </h3>
+                        <div class="space-y-4">${expDetailsHtml}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i data-lucide="briefcase" class="w-5 h-5 text-sky-500"></i>事業売上トップ</span>
+                            <span class="text-sm text-slate-500 font-normal">計: ${formatCurrency(dLatest.businessRev)}</span>
+                        </h3>
+                        <div class="space-y-4">${revDetailsHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // === 2. シミュレーター ロジック ===
+        let simState = { bRev: 2000000, sRev: 3000000, exp: 500000, socialIns: 500000 };
+        let simInitialized = false;
+
+        function initSimulator() {
+            if (!simInitialized) {
+                const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
+                if (years.length > 0) {
+                    const latest = pastData[years[0]];
+                    simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns };
+                    document.getElementById('sim-copy-btn').classList.remove('hidden');
+                    document.getElementById('sim-copy-text').innerText = `最新の実績(${latest.year.split(' ')[0]})をセット`;
+                }
+                updateSimUIValues();
+                calcSim();
+                simInitialized = true;
+            }
+        }
+
+        function copyLatestToSim() {
+            const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
+            if (years.length > 0) {
+                const latest = pastData[years[0]];
+                simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns };
+                updateSimUIValues();
+                calcSim();
+            }
+        }
+
+        function syncSim(field, valStr) {
+            const value = Number(valStr) || 0;
+            simState[field] = value;
+            if(field === 'bRev') {
+                const expRange = document.getElementById('sim-exp-range');
+                expRange.max = value || 1000000;
+            }
+            updateSimUIValues();
+            calcSim();
+        }
+
+        function updateSimUIValues() {
+            ['bRev', 'sRev', 'exp', 'socialIns'].forEach(k => {
+                document.getElementById(`sim-${k}-num`).value = simState[k];
+                document.getElementById(`sim-${k}-range`).value = simState[k];
+            });
+            document.getElementById('sim-exp-range').max = simState.bRev || 1000000;
+            
+            const expRatio = simState.bRev > 0 ? ((simState.exp / simState.bRev) * 100).toFixed(1) : 0;
+            document.getElementById('sim-exp-help').innerText = `現在の経費率: ${expRatio}% (事業売上に対する割合)`;
+        }
+
+        function calcSim() {
+            const { bRev, sRev, exp, socialIns } = simState;
+            
+            // 給与所得
+            let salaryIncome = 0;
+            if (sRev <= 1625000) salaryIncome = sRev - 550000;
+            else if (sRev <= 1800000) salaryIncome = sRev - (sRev * 0.4 - 100000);
+            else if (sRev <= 3600000) salaryIncome = sRev - (sRev * 0.3 + 80000);
+            else if (sRev <= 6600000) salaryIncome = sRev - (sRev * 0.2 + 440000);
+            else if (sRev <= 8500000) salaryIncome = sRev - (sRev * 0.1 + 1100000);
+            else salaryIncome = sRev - 1950000;
+            salaryIncome = Math.max(0, salaryIncome);
+
+            // 事業所得 (青色65万控除)
+            const businessIncome = Math.max(0, bRev - exp - 650000);
+            const totalIncome = salaryIncome + businessIncome;
+
+            // 課税所得
+            let taxableIncome = Math.max(0, totalIncome - (480000 + socialIns));
+            taxableIncome = Math.floor(taxableIncome / 1000) * 1000;
+
+            // 所得税
+            let incomeTax = 0;
+            if (taxableIncome <= 1950000) incomeTax = taxableIncome * 0.05;
+            else if (taxableIncome <= 3300000) incomeTax = taxableIncome * 0.10 - 97500;
+            else if (taxableIncome <= 6950000) incomeTax = taxableIncome * 0.20 - 427500;
+            else if (taxableIncome <= 9000000) incomeTax = taxableIncome * 0.23 - 636000;
+            else if (taxableIncome <= 18000000) incomeTax = taxableIncome * 0.33 - 1536000;
+            else if (taxableIncome <= 40000000) incomeTax = taxableIncome * 0.40 - 2796000;
+            else incomeTax = taxableIncome * 0.45 - 4796000;
+            
+            const totalIncomeTax = Math.floor((incomeTax * 1.021) / 100) * 100;
+            
+            // 住民税
+            let resTaxable = Math.max(0, totalIncome - (socialIns + 430000));
+            resTaxable = Math.floor(resTaxable / 1000) * 1000;
+            const residentTax = Math.floor(resTaxable * 0.10) + 5000;
+
+            const totalTaxes = totalIncomeTax + residentTax;
+            const totalRevenue = bRev + sRev;
+            const netIncome = totalRevenue - exp - socialIns - totalTaxes;
+
+            // DOMへ反映
+            document.getElementById('res-netIncome').innerText = formatCurrency(netIncome);
+            document.getElementById('res-totalRevenue').innerText = formatCurrency(totalRevenue);
+            document.getElementById('res-totalTaxes').innerText = formatCurrency(totalTaxes);
+            
+            document.getElementById('res-salaryIncome').innerText = formatCurrency(salaryIncome);
+            document.getElementById('res-businessIncome').innerText = formatCurrency(businessIncome);
+            document.getElementById('res-taxableIncome').innerText = formatCurrency(taxableIncome);
+            document.getElementById('res-incomeTax').innerText = formatCurrency(totalIncomeTax);
+            document.getElementById('res-residentTax').innerText = formatCurrency(residentTax);
+
+            // グラフ更新
+            const getPct = (val) => totalRevenue > 0 ? ((val / totalRevenue) * 100).toFixed(1) : 0;
+            const netPct = Math.max(0, getPct(netIncome));
+            const expPct = getPct(exp);
+            const socPct = getPct(socialIns);
+            const taxPct = getPct(totalTaxes);
+
+            document.getElementById('bar-net').style.width = `${netPct}%`;
+            document.getElementById('bar-exp').style.width = `${expPct}%`;
+            document.getElementById('bar-soc').style.width = `${socPct}%`;
+            document.getElementById('bar-tax').style.width = `${taxPct}%`;
+
+            document.getElementById('lbl-net').innerText = netPct;
+            document.getElementById('lbl-exp').innerText = expPct;
+            document.getElementById('lbl-soc').innerText = socPct;
+            document.getElementById('lbl-tax').innerText = taxPct;
+        }
+
+        // === 3. データ管理ロジック ===
+        let dmState = { step: 'idle', editYearKey: '', editData: null };
+
+        function renderDataManager() {
+            const container = document.getElementById('tab-data');
+            const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
+            
+            let topHtml = '';
+            if (dmState.step === 'idle') {
+                topHtml = `
+                    <div class="border-2 border-dashed border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 group" onclick="document.getElementById('file-upload').click()">
+                        <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
+                        </div>
+                        <p class="text-indigo-900 font-bold text-lg mb-1">確定申告書(PDF)をアップロード</p>
+                        <p class="text-indigo-600/70 text-sm">クリックしてファイルを選択（デモ: 2023年データが抽出されます）</p>
+                        <input type="file" id="file-upload" class="hidden" accept=".pdf,.json" onchange="handleFileSelect(event)">
+                    </div>`;
+            } else if (dmState.step === 'processing') {
+                topHtml = `
+                    <div class="py-16 text-center">
+                        <i data-lucide="loader-2" class="w-12 h-12 text-indigo-500 mx-auto animate-spin mb-4"></i>
+                        <h3 class="text-lg font-bold text-slate-700">AIがPDFを解析中...</h3>
+                        <p class="text-sm text-slate-500 mt-2">売上や経費の内訳を自動で抽出・分析しています</p>
+                    </div>`;
+            } else if (dmState.step === 'review') {
+                topHtml = `
+                    <div class="zoom-in">
+                        <div class="flex items-center gap-2 mb-6 text-emerald-600 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            <span class="font-bold">データの抽出が完了しました。内容を確認して保存してください。</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">管理年度</label><input type="number" value="${dmState.editYearKey}" onchange="dmState.editYearKey=this.value" class="w-full border border-slate-300 rounded-lg p-2 font-medium"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">表示名</label><input type="text" value="${dmState.editData.year}" onchange="dmState.editData.year=this.value" class="w-full border border-slate-300 rounded-lg p-2 font-medium"></div>
+                            <div class="col-span-1 md:col-span-2 border-t border-slate-200 my-2 pt-4"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">事業収入合計</label><input type="number" value="${dmState.editData.businessRev}" oninput="syncEdit('businessRev', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">給与収入合計</label><input type="number" value="${dmState.editData.salaryRev}" oninput="syncEdit('salaryRev', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">事業経費合計</label><input type="number" value="${dmState.editData.expenses}" oninput="syncEdit('expenses', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">社会保険料等</label><input type="number" value="${dmState.editData.socialIns}" oninput="syncEdit('socialIns', this.value)" class="w-full border border-slate-300 rounded-lg p-2"></div>
+                        </div>
+                        <div class="flex gap-3 mt-6 justify-end">
+                            <button onclick="dmCancel()" class="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">キャンセル</button>
+                            <button onclick="dmSave()" class="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-sm">
+                                <i data-lucide="save" class="w-4 h-4"></i> 保存して追加
+                            </button>
+                        </div>
+                    </div>`;
+            }
+
+            const listHtml = years.map(y => `
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group">
+                    <button onclick="dmDelete('${y}')" class="absolute top-3 right-3 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="削除">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    <div class="font-bold text-indigo-900 mb-3 border-b border-slate-100 pb-2">${pastData[y].year}</div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-slate-500">総収入:</span> <span class="font-semibold">${formatCurrency(pastData[y].totalRev)}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">経費:</span> <span class="font-semibold">${formatCurrency(pastData[y].expenses)}</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">所得税:</span> <span class="font-semibold text-rose-600">${formatCurrency(pastData[y].incomeTax)}</span></div>
+                    </div>
+                </div>
+            `).join('') || `<div class="col-span-full text-center py-10 text-slate-500 bg-slate-100/50 rounded-xl border border-dashed border-slate-300">データがありません</div>`;
+
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i data-lucide="file-up" class="w-5 h-5 text-indigo-500"></i>実績データの追加</h2>
+                        <p class="text-sm text-slate-500 mt-1">新しい確定申告書のPDFをアップロードしてデータを抽出します</p>
+                    </div>
+                    <div class="p-6">${topHtml}</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">表示名 (例: 2023年度)</label>
-                  <input type="text" value={editData.year} onChange={e => setEditData({...editData, year: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2 font-medium" />
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 px-1">登録済みデータ一覧</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${listHtml}</div>
                 </div>
-                
-                <div className="col-span-1 md:col-span-2 border-t border-slate-200 my-2 pt-4"></div>
-                
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">事業収入合計</label>
-                  <input type="number" value={editData.businessRev} onChange={e => handleChange('businessRev', e.target.value)} className="w-full border border-slate-300 rounded-lg p-2" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">給与収入合計</label>
-                  <input type="number" value={editData.salaryRev} onChange={e => handleChange('salaryRev', e.target.value)} className="w-full border border-slate-300 rounded-lg p-2" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">事業経費合計</label>
-                  <input type="number" value={editData.expenses} onChange={e => handleChange('expenses', e.target.value)} className="w-full border border-slate-300 rounded-lg p-2" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">社会保険料等</label>
-                  <input type="number" value={editData.socialIns} onChange={e => handleChange('socialIns', e.target.value)} className="w-full border border-slate-300 rounded-lg p-2" />
-                </div>
-              </div>
+            `;
+            lucide.createIcons();
+        }
 
-              <div className="flex gap-3 mt-6 justify-end">
-                <button onClick={() => setStep('idle')} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">
-                  キャンセル
-                </button>
-                <button onClick={handleSave} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-sm">
-                  <Save className="w-4 h-4" />
-                  保存して追加する
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        function handleFileSelect(e) {
+            if (!e.target.files.length) return;
+            dmState.step = 'processing';
+            renderDataManager();
+            
+            setTimeout(() => {
+                dmState.editYearKey = '2023';
+                dmState.editData = {
+                    year: '2023年度 (令和5年分)',
+                    businessRev: 1540000, salaryRev: 3100000, totalRev: 4640000,
+                    expenses: 820000, socialIns: 580000, incomeTax: 45000, deductions: 1450000,
+                    revenueDetails: [{ name: '既存クライアントA', amount: 1000000 }, { name: '新規クライアントB', amount: 540000 }],
+                    expenseDetails: [{ name: '接待交際費', amount: 400000 }, { name: '消耗品費', amount: 200000 }, { name: 'その他', amount: 220000 }]
+                };
+                dmState.step = 'review';
+                renderDataManager();
+            }, 2000);
+        }
 
-      {/* 登録済みデータ一覧 */}
-      <div>
-        <h3 className="text-lg font-bold text-slate-800 mb-4 px-1">登録済みデータ一覧</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {years.map(year => {
-            const d = pastData[year];
-            return (
-              <div key={year} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group">
-                <button 
-                  onClick={() => handleDelete(year)}
-                  className="absolute top-3 right-3 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  title="削除"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <div className="font-bold text-indigo-900 mb-3 border-b border-slate-100 pb-2">{d.year}</div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">総収入:</span> <span className="font-semibold">{formatCurrency(d.totalRev)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">経費:</span> <span className="font-semibold">{formatCurrency(d.expenses)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">所得税:</span> <span className="font-semibold text-rose-600">{formatCurrency(d.incomeTax)}</span></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        function syncEdit(field, val) {
+            dmState.editData[field] = Number(val) || 0;
+            dmState.editData.totalRev = dmState.editData.businessRev + dmState.editData.salaryRev;
+        }
 
-    </div>
-  );
-}
+        function dmCancel() {
+            dmState = { step: 'idle', editYearKey: '', editData: null };
+            renderDataManager();
+        }
 
-// === シミュレーターコンポーネント (変更なし・省略) ===
-function Simulator({ pastData }) {
-  const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
-  const latestData = years.length > 0 ? pastData[years[0]] : null;
-  const [bRev, setBRev] = useState(latestData ? latestData.businessRev : 2000000);
-  const [sRev, setSRev] = useState(latestData ? latestData.salaryRev : 3000000);
-  const [exp, setExp] = useState(latestData ? latestData.expenses : 500000);
-  const [socialIns, setSocialIns] = useState(latestData ? latestData.socialIns : 500000);
+        function dmSave() {
+            if (dmState.editYearKey) {
+                pastData[dmState.editYearKey] = dmState.editData;
+            }
+            dmState = { step: 'idle', editYearKey: '', editData: null };
+            renderDataManager();
+        }
 
-  const copyLatestYear = () => {
-    if (!latestData) return;
-    setBRev(latestData.businessRev);
-    setSRev(latestData.salaryRev);
-    setExp(latestData.expenses);
-    setSocialIns(latestData.socialIns);
-  };
+        function dmDelete(yearKey) {
+            if (confirm(`${yearKey}年度のデータを削除しますか？`)) {
+                delete pastData[yearKey];
+                renderDataManager();
+            }
+        }
 
-  const calculations = useMemo(() => {
-    let salaryIncome = 0;
-    if (sRev <= 1625000) salaryIncome = sRev - 550000;
-    else if (sRev <= 1800000) salaryIncome = sRev - (sRev * 0.4 - 100000);
-    else if (sRev <= 3600000) salaryIncome = sRev - (sRev * 0.3 + 80000);
-    else if (sRev <= 6600000) salaryIncome = sRev - (sRev * 0.2 + 440000);
-    else if (sRev <= 8500000) salaryIncome = sRev - (sRev * 0.1 + 1100000);
-    else salaryIncome = sRev - 1950000;
-    salaryIncome = Math.max(0, salaryIncome);
-
-    const blueDeduction = 650000;
-    const businessIncome = Math.max(0, bRev - exp - blueDeduction);
-    const totalIncome = salaryIncome + businessIncome;
-
-    const basicDeduction = 480000;
-    const totalDeductions = basicDeduction + socialIns;
-    let taxableIncome = Math.max(0, totalIncome - totalDeductions);
-    taxableIncome = Math.floor(taxableIncome / 1000) * 1000;
-
-    let incomeTax = 0;
-    if (taxableIncome <= 1950000) incomeTax = taxableIncome * 0.05;
-    else if (taxableIncome <= 3300000) incomeTax = taxableIncome * 0.10 - 97500;
-    else if (taxableIncome <= 6950000) incomeTax = taxableIncome * 0.20 - 427500;
-    else if (taxableIncome <= 9000000) incomeTax = taxableIncome * 0.23 - 636000;
-    else if (taxableIncome <= 18000000) incomeTax = taxableIncome * 0.33 - 1536000;
-    else if (taxableIncome <= 40000000) incomeTax = taxableIncome * 0.40 - 2796000;
-    else incomeTax = taxableIncome * 0.45 - 4796000;
-    
-    const totalIncomeTax = Math.floor((incomeTax * 1.021) / 100) * 100;
-    let resTaxable = Math.max(0, totalIncome - (socialIns + 430000));
-    resTaxable = Math.floor(resTaxable / 1000) * 1000;
-    const residentTax = Math.floor(resTaxable * 0.10) + 5000;
-
-    const totalRevenue = bRev + sRev;
-    const netIncome = totalRevenue - exp - socialIns - totalIncomeTax - residentTax;
-
-    return { totalRevenue, businessIncome, salaryIncome, taxableIncome, totalIncomeTax, residentTax, totalTaxes: totalIncomeTax + residentTax, netIncome };
-  }, [bRev, sRev, exp, socialIns]);
-
-  const InputSlider = ({ label, value, setter, max, step, colorClass, helpText }) => (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-2">
-        <label className="font-semibold text-slate-700 text-sm">{label}</label>
-        <div className="flex items-center gap-1">
-          <input type="number" value={value} onChange={(e) => setter(Number(e.target.value))} className="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          <span className="text-sm text-slate-500">円</span>
-        </div>
-      </div>
-      <input type="range" min="0" max={max} step={step} value={value} onChange={(e) => setter(Number(e.target.value))} className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 ${colorClass}`} />
-      {helpText && <p className="text-xs text-slate-400 mt-1.5">{helpText}</p>}
-    </div>
-  );
-
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">今期シミュレーター</h2>
-          <p className="text-slate-500 mt-1">数値を動かして、税金と手取りの変化を確認しましょう</p>
-        </div>
-        {latestData && (
-          <button onClick={copyLatestYear} className="flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-            <RefreshCcw className="w-4 h-4" />
-            最新の実績({latestData.year.split(' ')[0]})をセット
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="font-bold text-lg border-b border-slate-100 pb-3 mb-5 flex items-center gap-2"><Calculator className="w-5 h-5 text-indigo-500" />収入と支出の予定</h3>
-            <InputSlider label="事業売上（見込）" value={bRev} setter={setBRev} max={10000000} step={10000} colorClass="accent-sky-500" />
-            <InputSlider label="給与収入（見込）" value={sRev} setter={setSRev} max={10000000} step={10000} colorClass="accent-indigo-500" />
-            <div className="relative pt-4 border-t border-slate-100">
-              <InputSlider label="経費の予定・目標" value={exp} setter={setExp} max={bRev || 1000000} step={10000} colorClass="accent-orange-500" helpText={`現在の経費率: ${bRev > 0 ? ((exp / bRev) * 100).toFixed(1) : 0}% (事業売上に対する割合)`} />
-            </div>
-            <div className="relative pt-4 border-t border-slate-100">
-              <InputSlider label="社会保険料等 支払予定額" value={socialIns} setter={setSocialIns} max={2000000} step={10000} colorClass="accent-purple-500" helpText="国民健康保険、国民年金などの年間支払予定額" />
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-10"><Wallet className="w-48 h-48" /></div>
-            <div className="relative z-10">
-              <p className="text-slate-400 font-medium mb-1">最終的なあなたの手取り額（想定）</p>
-              <div className="text-4xl sm:text-5xl font-extrabold mb-8 tracking-tight text-emerald-400">{formatCurrency(calculations.netIncome)}</div>
-              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-700/50">
-                <div><p className="text-slate-400 text-xs mb-1">総収入</p><p className="text-xl font-bold">{formatCurrency(calculations.totalRevenue)}</p></div>
-                <div><p className="text-slate-400 text-xs mb-1">税金合計</p><p className="text-xl font-bold text-rose-400">{formatCurrency(calculations.totalTaxes)}</p></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-lg mb-6 border-b border-slate-100 pb-3">計算の内訳</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg"><span className="text-slate-600 text-sm font-medium">給与所得 (控除後)</span><span className="font-bold">{formatCurrency(calculations.salaryIncome)}</span></div>
-              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg"><span className="text-slate-600 text-sm font-medium">事業所得 (青色65万控除後)</span><span className="font-bold">{formatCurrency(calculations.businessIncome)}</span></div>
-              <div className="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg"><span className="text-indigo-800 text-sm font-bold">課税される所得金額</span><span className="font-bold text-indigo-700">{formatCurrency(calculations.taxableIncome)}</span></div>
-              <div className="pt-4 mt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
-                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100"><p className="text-rose-600 text-xs font-bold mb-1">想定 所得税</p><p className="text-xl font-extrabold text-rose-700">{formatCurrency(calculations.totalIncomeTax)}</p></div>
-                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100"><p className="text-rose-600 text-xs font-bold mb-1">想定 住民税</p><p className="text-xl font-extrabold text-rose-700">{formatCurrency(calculations.residentTax)}</p></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="font-bold text-sm text-slate-700 mb-4">お金の行方グラフ（総収入に対する割合）</h3>
-            <div className="h-8 w-full rounded-full overflow-hidden flex bg-slate-100">
-              <div style={{ width: `${Math.max(0, (calculations.netIncome / calculations.totalRevenue) * 100)}%` }} className="bg-emerald-400 flex items-center justify-center text-xs font-bold text-slate-900 overflow-hidden" title="手取り">手取り</div>
-              <div style={{ width: `${(exp / calculations.totalRevenue) * 100}%` }} className="bg-orange-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="経費">経費</div>
-              <div style={{ width: `${(socialIns / calculations.totalRevenue) * 100}%` }} className="bg-purple-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="社会保険料">社保</div>
-              <div style={{ width: `${(calculations.totalTaxes / calculations.totalRevenue) * 100}%` }} className="bg-rose-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="税金">税</div>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 justify-center">
-              <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-emerald-400"></div>手取り ({((calculations.netIncome / calculations.totalRevenue) * 100).toFixed(1)}%)</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-orange-400"></div>経費 ({((exp / calculations.totalRevenue) * 100).toFixed(1)}%)</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-purple-400"></div>社保等 ({((socialIns / calculations.totalRevenue) * 100).toFixed(1)}%)</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-rose-500"></div>税金 ({((calculations.totalTaxes / calculations.totalRevenue) * 100).toFixed(1)}%)</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        // === 初期化処理 ===
+        window.addEventListener('DOMContentLoaded', () => {
+            switchTab('dashboard');
+        });
+    </script>
+</body>
+</html>
