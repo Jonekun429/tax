@@ -14,8 +14,8 @@
                 extend: {
                     animation: {
                         blob: "blob 7s infinite",
-                        fadeIn: "fadeIn 0.5s ease-out forwards",
-                        zoomIn: "zoomIn 0.3s ease-out forwards"
+                        fadeIn: "fadeIn 0.4s ease-out forwards",
+                        zoomIn: "zoomIn 0.2s ease-out forwards"
                     },
                     keyframes: {
                         blob: {
@@ -38,8 +38,8 @@
         }
     </script>
     <style>
-        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .zoom-in { animation: zoomIn 0.2s ease-out forwards; }
         /* スライダーのスタイル微調整 */
         input[type=range] {
             -webkit-appearance: none;
@@ -52,6 +52,7 @@
             background: currentColor;
             cursor: pointer;
             margin-top: -4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%; height: 8px;
@@ -61,7 +62,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12 relative">
     <!-- ヘッダー -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -95,7 +96,7 @@
         <!-- コンテンツエリア: ダッシュボード -->
         <div id="tab-dashboard" class="fade-in block space-y-6"></div>
 
-        <!-- コンテンツエリア: シミュレーター (静的HTML) -->
+        <!-- コンテンツエリア: シミュレーター -->
         <div id="tab-simulator" class="fade-in hidden">
             <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -111,6 +112,20 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- 入力パネル -->
                 <div class="lg:col-span-5 space-y-4">
+                    
+                    <!-- AI目安アシスト トグル -->
+                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                        <div>
+                            <p class="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4 text-amber-500 fill-amber-500"></i>AI目安アシスト機能
+                            </p>
+                            <p class="text-xs text-indigo-700 mt-1">売上を入れると経費・社保の目安を自動計算します</p>
+                        </div>
+                        <button id="auto-sync-toggle" onclick="toggleAutoSync()" class="w-12 h-6 rounded-full bg-indigo-500 relative transition-colors duration-200 focus:outline-none flex-shrink-0">
+                            <div id="auto-sync-knob" class="w-4 h-4 rounded-full bg-white absolute top-1 left-1 transform translate-x-6 transition-transform duration-200"></div>
+                        </button>
+                    </div>
+
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h3 class="font-bold text-lg border-b border-slate-100 pb-3 mb-5 flex items-center gap-2">
                             <i data-lucide="calculator" class="w-5 h-5 text-indigo-500"></i>収入と支出の予定
@@ -121,11 +136,11 @@
                             <div class="flex justify-between items-center mb-2">
                                 <label class="font-semibold text-slate-700 text-sm">事業売上（見込）</label>
                                 <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-bRev-num" oninput="syncSim('bRev', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <input type="number" id="sim-bRev-num" oninput="syncSim('bRev', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                     <span class="text-sm text-slate-500">円</span>
                                 </div>
                             </div>
-                            <input type="range" id="sim-bRev-range" min="0" max="10000000" step="10000" oninput="syncSim('bRev', this.value)" class="w-full h-2 rounded-lg text-sky-500">
+                            <input type="range" id="sim-bRev-range" min="0" max="10000000" step="10000" oninput="syncSim('bRev', this.value, true)" class="w-full h-2 rounded-lg text-sky-500">
                         </div>
 
                         <!-- 給与収入 -->
@@ -133,11 +148,11 @@
                             <div class="flex justify-between items-center mb-2">
                                 <label class="font-semibold text-slate-700 text-sm">給与収入（見込）</label>
                                 <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-sRev-num" oninput="syncSim('sRev', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <input type="number" id="sim-sRev-num" oninput="syncSim('sRev', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                     <span class="text-sm text-slate-500">円</span>
                                 </div>
                             </div>
-                            <input type="range" id="sim-sRev-range" min="0" max="10000000" step="10000" oninput="syncSim('sRev', this.value)" class="w-full h-2 rounded-lg text-indigo-500">
+                            <input type="range" id="sim-sRev-range" min="0" max="10000000" step="10000" oninput="syncSim('sRev', this.value, true)" class="w-full h-2 rounded-lg text-indigo-500">
                         </div>
 
                         <!-- 経費 -->
@@ -145,33 +160,43 @@
                             <div class="flex justify-between items-center mb-2">
                                 <label class="font-semibold text-slate-700 text-sm">経費の予定・目標</label>
                                 <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-exp-num" oninput="syncSim('exp', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <input type="number" id="sim-exp-num" oninput="syncSim('exp', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 focus:outline-none">
                                     <span class="text-sm text-slate-500">円</span>
                                 </div>
                             </div>
-                            <input type="range" id="sim-exp-range" min="0" step="10000" oninput="syncSim('exp', this.value)" class="w-full h-2 rounded-lg text-orange-500">
-                            <p class="text-xs text-slate-400 mt-1.5" id="sim-exp-help"></p>
+                            <input type="range" id="sim-exp-range" min="0" step="10000" oninput="syncSim('exp', this.value, true)" class="w-full h-2 rounded-lg text-orange-500">
+                            <p class="text-xs text-slate-400 mt-1.5 flex justify-between">
+                                <span id="sim-exp-help">現在の経費率: 0%</span>
+                                <span id="sim-exp-badge" class="hidden text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold">手動調整中</span>
+                            </p>
                         </div>
 
                         <!-- 社会保険料等 -->
-                        <div class="relative pt-4 border-t border-slate-100">
+                        <div class="relative pt-4 border-t border-slate-100 mb-6">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="font-semibold text-slate-700 text-sm">社会保険料等 支払予定額</label>
                                 <div class="flex items-center gap-1">
-                                    <input type="number" id="sim-socialIns-num" oninput="syncSim('socialIns', this.value)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <input type="number" id="sim-socialIns-num" oninput="syncSim('socialIns', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-none">
                                     <span class="text-sm text-slate-500">円</span>
                                 </div>
                             </div>
-                            <input type="range" id="sim-socialIns-range" min="0" max="2000000" step="10000" oninput="syncSim('socialIns', this.value)" class="w-full h-2 rounded-lg text-purple-500">
-                            <p class="text-xs text-slate-400 mt-1.5">国民健康保険、国民年金などの年間支払予定額</p>
+                            <input type="range" id="sim-socialIns-range" min="0" max="2000000" step="10000" oninput="syncSim('socialIns', this.value, true)" class="w-full h-2 rounded-lg text-purple-500">
+                            <p class="text-xs text-slate-400 mt-1.5 flex justify-between">
+                                <span>国民健康保険、国民年金などの年間予定額</span>
+                                <span id="sim-soc-badge" class="hidden text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">手動調整中</span>
+                            </p>
                         </div>
-                    </div>
 
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3 text-blue-800 text-sm">
-                        <i data-lucide="info" class="w-5 h-5 shrink-0 mt-0.5"></i>
-                        <div>
-                            <p class="font-semibold mb-1">経費を入力する際のヒント</p>
-                            <p class="text-blue-700/80">経費スライダーを動かして増やすと、右側の「税金」が減りますが、同時に支出も増えるため最終的な「手取り額」がどう変わるか観察してみてください。</p>
+                        <!-- その他の控除 -->
+                        <div class="relative pt-4 border-t border-slate-100 bg-slate-50 -mx-6 px-6 -mb-6 pb-6 rounded-b-2xl">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="font-semibold text-slate-700 text-sm">各種控除（任意入力）</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="sim-otherDed-num" oninput="syncSim('otherDed', this.value, true)" class="w-32 text-right border border-slate-300 rounded-md py-1 px-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 focus:outline-none" placeholder="0">
+                                    <span class="text-sm text-slate-500">円</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">障害者控除、配偶者控除、生命保険料控除などの合計額。（※基礎控除・青色申告控除は自動適用済みです）</p>
                         </div>
                     </div>
                 </div>
@@ -195,18 +220,29 @@
 
                     <!-- 内訳 -->
                     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                        <h3 class="font-bold text-lg mb-6 border-b border-slate-100 pb-3">計算の内訳</h3>
-                        <div class="space-y-4">
+                        <h3 class="font-bold text-lg mb-4 border-b border-slate-100 pb-3">計算の内訳</h3>
+                        <div class="space-y-2">
                             <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                <span class="text-slate-600 text-sm font-medium">給与所得 (控除後)</span><span id="res-salaryIncome" class="font-bold">¥0</span>
+                                <span class="text-slate-600 text-sm font-medium">給与所得 (給与所得控除後)</span><span id="res-salaryIncome" class="font-bold">¥0</span>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                <span class="text-slate-600 text-sm font-medium">事業所得 (青色65万控除後)</span><span id="res-businessIncome" class="font-bold">¥0</span>
+                                <span class="text-slate-600 text-sm font-medium">事業所得 (経費差引後)</span><span id="res-businessIncome" class="font-bold">¥0</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg">
-                                <span class="text-indigo-800 text-sm font-bold">課税される所得金額</span><span id="res-taxableIncome" class="font-bold text-indigo-700">¥0</span>
+                            
+                            <div class="pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
+                                <span>適用済控除: <span class="font-semibold text-slate-600">青色申告特別控除</span></span><span>-650,000円</span>
                             </div>
-                            <div class="pt-4 mt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
+                            <div class="pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
+                                <span>適用済控除: <span class="font-semibold text-slate-600">基礎控除</span></span><span>-480,000円</span>
+                            </div>
+                            <div id="res-otherDed-row" class="hidden pl-3 pr-4 py-1 text-xs text-slate-500 flex justify-between border-l-2 border-slate-200 ml-2">
+                                <span>適用済控除: <span class="font-semibold text-slate-600">その他各種控除</span></span><span id="res-otherDed-val">-0円</span>
+                            </div>
+
+                            <div class="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg mt-2">
+                                <span class="text-indigo-800 text-sm font-bold">課税される所得金額</span><span id="res-taxableIncome" class="font-bold text-indigo-700 text-lg">¥0</span>
+                            </div>
+                            <div class="pt-4 mt-2 border-t border-slate-100 grid grid-cols-2 gap-4">
                                 <div class="p-4 bg-rose-50 rounded-xl border border-rose-100">
                                     <p class="text-rose-600 text-xs font-bold mb-1">想定 所得税</p><p id="res-incomeTax" class="text-xl font-extrabold text-rose-700">¥0</p>
                                 </div>
@@ -221,10 +257,10 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h3 class="font-bold text-sm text-slate-700 mb-4">お金の行方グラフ（総収入に対する割合）</h3>
                         <div class="h-8 w-full rounded-full overflow-hidden flex bg-slate-100">
-                            <div id="bar-net" class="bg-emerald-400 flex items-center justify-center text-xs font-bold text-slate-900 overflow-hidden" title="手取り" style="width: 0%">手取り</div>
-                            <div id="bar-exp" class="bg-orange-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="経費" style="width: 0%">経費</div>
-                            <div id="bar-soc" class="bg-purple-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="社会保険料" style="width: 0%">社保</div>
-                            <div id="bar-tax" class="bg-rose-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden" title="税金" style="width: 0%">税</div>
+                            <div id="bar-net" class="bg-emerald-400 flex items-center justify-center text-xs font-bold text-slate-900 overflow-hidden transition-all duration-300" title="手取り" style="width: 0%">手取り</div>
+                            <div id="bar-exp" class="bg-orange-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="経費" style="width: 0%">経費</div>
+                            <div id="bar-soc" class="bg-purple-400 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="社会保険料" style="width: 0%">社保</div>
+                            <div id="bar-tax" class="bg-rose-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden transition-all duration-300" title="税金" style="width: 0%">税金</div>
                         </div>
                         <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 justify-center">
                             <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-emerald-400"></div>手取り (<span id="lbl-net">0</span>%)</div>
@@ -241,6 +277,21 @@
         <div id="tab-data" class="fade-in hidden space-y-8"></div>
     </main>
 
+    <!-- UI モーダル (詳細表示用) -->
+    <div id="dashboard-modal" class="hidden fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-zoomIn border border-slate-200">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="modal-title" class="font-bold text-lg text-slate-800 flex items-center gap-2">詳細</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="p-6 space-y-4 max-h-[60vh] overflow-y-auto bg-white">
+                <!-- 動的生成エリア -->
+            </div>
+        </div>
+    </div>
+
     <script>
         // === ユーティリティ ===
         const formatCurrency = (amount) => {
@@ -250,51 +301,16 @@
         // === データ構造 ===
         let pastData = {
             2024: {
-                year: '2024年度 (令和6年分)',
-                businessRev: 1768504,
-                salaryRev: 3590579,
-                totalRev: 5359083,
-                expenses: 969159,
-                socialIns: 795697, 
-                incomeTax: 50100,
-                deductions: 1578697,
-                revenueDetails: [
-                    { name: '(有)フクヤフドウサン', amount: 702504 },
-                    { name: '(株)ライズデザインワークス', amount: 516000 },
-                    { name: '(株)ハラヤ', amount: 250000 },
-                    { name: 'アルファ・マテリア', amount: 275000 },
-                    { name: 'その他', amount: 25000 }
-                ],
-                expenseDetails: [
-                    { name: '減価償却費', amount: 368600 },
-                    { name: '接待交際費', amount: 310311 },
-                    { name: '通信費', amount: 69271 },
-                    { name: '消耗品費', amount: 11030 },
-                    { name: 'その他', amount: 209947 }
-                ]
+                year: '2024年度 (令和6年分)', businessRev: 1768504, salaryRev: 3590579, totalRev: 5359083,
+                expenses: 969159, socialIns: 795697, incomeTax: 50100, deductions: 1578697,
+                revenueDetails: [{ name: '(有)フクヤフドウサン', amount: 702504 }, { name: '(株)ライズデザインワークス', amount: 516000 }, { name: '(株)ハラヤ', amount: 250000 }, { name: 'アルファ・マテリア', amount: 275000 }, { name: 'その他', amount: 25000 }],
+                expenseDetails: [{ name: '減価償却費', amount: 368600 }, { name: '接待交際費', amount: 310311 }, { name: '通信費', amount: 69271 }, { name: '消耗品費', amount: 11030 }, { name: 'その他', amount: 209947 }]
             },
             2025: {
-                year: '2025年度 (令和7年分)',
-                businessRev: 1983285,
-                salaryRev: 3023616,
-                totalRev: 5006901,
-                expenses: 397203,
-                socialIns: 434009, 
-                incomeTax: 68600, 
-                deductions: 1597749,
-                revenueDetails: [
-                    { name: '山田 亮平', amount: 780000 },
-                    { name: '(有)フクヤフドウサン', amount: 746285 },
-                    { name: '(株)ハラヤ', amount: 300000 },
-                    { name: 'アルファ・マテリア', amount: 125000 },
-                    { name: 'その他', amount: 32000 }
-                ],
-                expenseDetails: [
-                    { name: '接待交際費', amount: 254962 },
-                    { name: '消耗品費', amount: 33090 },
-                    { name: '通信費', amount: 6484 },
-                    { name: 'その他', amount: 102667 }
-                ]
+                year: '2025年度 (令和7年分)', businessRev: 1983285, salaryRev: 3023616, totalRev: 5006901,
+                expenses: 397203, socialIns: 434009, incomeTax: 68600, deductions: 1597749,
+                revenueDetails: [{ name: '山田 亮平', amount: 780000 }, { name: '(有)フクヤフドウサン', amount: 746285 }, { name: '(株)ハラヤ', amount: 300000 }, { name: 'アルファ・マテリア', amount: 125000 }, { name: 'その他', amount: 32000 }],
+                expenseDetails: [{ name: '接待交際費', amount: 254962 }, { name: '消耗品費', amount: 33090 }, { name: '通信費', amount: 6484 }, { name: 'その他', amount: 102667 }]
             }
         };
 
@@ -319,14 +335,12 @@
             if (tabId === 'simulator') initSimulator();
             if (tabId === 'data') renderDataManager();
             
-            // アイコン再描画
             lucide.createIcons();
         }
 
         // === 1. ダッシュボードロジック ===
         function generateInsights(curr, prev) {
             const insights = [];
-            // 収入
             const topClient = curr.revenueDetails?.sort((a,b) => b.amount - a.amount)[0];
             if (topClient) {
                 insights.push({
@@ -334,7 +348,6 @@
                     text: `今期の事業収入トップは「${topClient.name}」で、${formatCurrency(topClient.amount)}の売上がありました。上位のクライアントから安定した収益を確保できており、事業の軸として育ってきています。`
                 });
             }
-            // 支出対効果
             if (prev) {
                 if (curr.businessRev > prev.businessRev && curr.expenses < prev.expenses) {
                     insights.push({
@@ -348,7 +361,6 @@
                     });
                 }
             }
-            // 経費アドバイス
             const topExpense = curr.expenseDetails?.sort((a,b) => b.amount - a.amount).find(e => e.name !== 'その他');
             if (topExpense) {
                 const expenseRatio = ((topExpense.amount / curr.expenses) * 100).toFixed(1);
@@ -362,6 +374,58 @@
             }
             return insights;
         }
+
+        // ▼ モーダル開閉ロジック
+        function openModal(type) {
+            const years = Object.keys(pastData).map(Number).sort((a, b) => b - a);
+            if(years.length === 0) return;
+            const latest = pastData[years[0]];
+
+            const titleEl = document.getElementById('modal-title');
+            const contentEl = document.getElementById('modal-content');
+
+            if (type === 'total') {
+                titleEl.innerHTML = `<i data-lucide="briefcase" class="w-5 h-5 text-blue-500"></i> 総収入の内訳`;
+                contentEl.innerHTML = `
+                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="text-slate-600">事業収入</span><span class="font-bold">${formatCurrency(latest.businessRev)}</span></div>
+                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg"><span class="text-slate-600">給与収入</span><span class="font-bold">${formatCurrency(latest.salaryRev)}</span></div>
+                    <div class="border-t border-slate-200 mt-2 pt-3 flex justify-between p-3"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-blue-600 text-lg">${formatCurrency(latest.totalRev)}</span></div>
+                `;
+            } else if (type === 'expense') {
+                titleEl.innerHTML = `<i data-lucide="file-text" class="w-5 h-5 text-orange-500"></i> 事業経費の詳細`;
+                let html = latest.expenseDetails?.sort((a,b)=>b.amount-a.amount).map(item => `
+                    <div class="flex justify-between p-3 bg-slate-50 rounded-lg mb-2">
+                        <span class="text-slate-600">${item.name}</span><span class="font-bold">${formatCurrency(item.amount)}</span>
+                    </div>
+                `).join('') || '<p class="text-slate-500 text-center text-sm py-4">内訳データがありません</p>';
+                html += `<div class="border-t border-slate-200 mt-2 pt-3 flex justify-between p-3"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-orange-600 text-lg">${formatCurrency(latest.expenses)}</span></div>`;
+                contentEl.innerHTML = html;
+            } else if (type === 'social') {
+                titleEl.innerHTML = `<i data-lucide="landmark" class="w-5 h-5 text-purple-500"></i> 社会保険料等`;
+                contentEl.innerHTML = `
+                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">国民年金、国民健康保険などの合算金額です。<br>抽出された確定申告書データに基づく合計額となります。</p>
+                    <div class="flex justify-between p-4 bg-purple-50 rounded-xl border border-purple-100"><span class="font-bold text-slate-800">合計</span><span class="font-bold text-purple-600 text-xl">${formatCurrency(latest.socialIns)}</span></div>
+                `;
+            } else if (type === 'tax') {
+                titleEl.innerHTML = `<i data-lucide="dollar-sign" class="w-5 h-5 text-rose-500"></i> 算出所得税`;
+                contentEl.innerHTML = `
+                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">課税所得をもとに算出された所得税額です。<br>（※住宅ローン控除等の税額控除前の金額です）</p>
+                    <div class="flex justify-between p-4 bg-rose-50 rounded-xl border border-rose-100"><span class="font-bold text-slate-800">算出税額</span><span class="font-bold text-rose-600 text-xl">${formatCurrency(latest.incomeTax)}</span></div>
+                `;
+            }
+
+            document.getElementById('dashboard-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('dashboard-modal').classList.add('hidden');
+        }
+
+        // モーダルの外側クリックで閉じる
+        document.getElementById('dashboard-modal').addEventListener('click', function(e) {
+            if(e.target === this) closeModal();
+        });
 
         function renderDashboard() {
             const container = document.getElementById('tab-dashboard');
@@ -382,7 +446,6 @@
             const dLatest = pastData[latestYear];
             const dPrev = prevYear ? pastData[prevYear] : null;
 
-            // インサイト
             const insights = generateInsights(dLatest, dPrev);
             const insightsHtml = insights.map(ins => `
                 <div class="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 hover:bg-white/15 transition-colors">
@@ -394,7 +457,6 @@
                 </div>
             `).join('');
 
-            // カード計算
             const getDiffHtml = (curr, prev, isCost) => {
                 if (!prev) return `<span class="text-slate-400">前年データなし</span>`;
                 const diff = curr - prev;
@@ -411,12 +473,16 @@
                 `;
             };
 
-            const card = (title, curr, prev, icon, colorCls, isCost) => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 ${colorCls}"><i data-lucide="${icon}" class="w-16 h-16"></i></div>
-                    <div class="flex items-center gap-2 text-slate-600 mb-2">
-                        <div class="p-2 rounded-lg ${colorCls} bg-opacity-10"><i data-lucide="${icon}" class="w-4 h-4 ${colorCls}"></i></div>
-                        <h3 class="font-semibold text-sm">${title}</h3>
+            // ▼ カードにonclickとホバーエフェクトを追加
+            const card = (type, title, curr, prev, icon, colorCls, isCost) => `
+                <div onclick="openModal('${type}')" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col relative overflow-hidden cursor-pointer hover:shadow-md hover:border-${colorCls.split('-')[1]}-300 transition-all group">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 ${colorCls} group-hover:scale-110 group-hover:opacity-10 transition-all duration-300"><i data-lucide="${icon}" class="w-16 h-16"></i></div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2 text-slate-600">
+                            <div class="p-2 rounded-lg ${colorCls} bg-opacity-10"><i data-lucide="${icon}" class="w-4 h-4 ${colorCls}"></i></div>
+                            <h3 class="font-semibold text-sm">${title}</h3>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
                     </div>
                     <div class="text-2xl font-bold text-slate-800 mb-3">${formatCurrency(curr)}</div>
                     <div class="mt-auto pt-3 border-t border-slate-50 text-xs flex justify-between items-center">
@@ -425,7 +491,6 @@
                 </div>
             `;
 
-            // 詳細グラフ
             const expDetailsHtml = dLatest.expenseDetails?.sort((a,b)=>b.amount-a.amount).map(item => {
                 const ratio = ((item.amount / dLatest.expenses) * 100).toFixed(1);
                 return `
@@ -481,17 +546,17 @@
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    ${card('総収入 (事業+給与)', dLatest.totalRev, dPrev?.totalRev, 'briefcase', 'text-blue-600', false)}
-                    ${card('事業経費', dLatest.expenses, dPrev?.expenses, 'file-text', 'text-orange-600', true)}
-                    ${card('社会保険料等', dLatest.socialIns, dPrev?.socialIns, 'landmark', 'text-purple-600', true)}
-                    ${card('所得税', dLatest.incomeTax, dPrev?.incomeTax, 'dollar-sign', 'text-rose-600', true)}
+                    ${card('total', '総収入 (事業+給与)', dLatest.totalRev, dPrev?.totalRev, 'briefcase', 'text-blue-600', false)}
+                    ${card('expense', '事業経費', dLatest.expenses, dPrev?.expenses, 'file-text', 'text-orange-600', true)}
+                    ${card('social', '社会保険料等', dLatest.socialIns, dPrev?.socialIns, 'landmark', 'text-purple-600', true)}
+                    ${card('tax', '所得税', dLatest.incomeTax, dPrev?.incomeTax, 'dollar-sign', 'text-rose-600', true)}
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                         <h3 class="font-bold text-slate-800 mb-6 flex items-center justify-between">
                             <span class="flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-orange-500"></i>事業経費の内訳</span>
-                            <span class="text-sm text-slate-500 font-normal">計: ${formatCurrency(dLatest.expenses)}</span>
+                            <span class="text-sm text-slate-500 font-normal cursor-pointer hover:text-orange-500 transition-colors" onclick="openModal('expense')">詳細を見る <i data-lucide="chevron-right" class="w-3 h-3 inline"></i></span>
                         </h3>
                         <div class="space-y-4">${expDetailsHtml}</div>
                     </div>
@@ -507,15 +572,76 @@
         }
 
         // === 2. シミュレーター ロジック ===
-        let simState = { bRev: 2000000, sRev: 3000000, exp: 500000, socialIns: 500000 };
+        let simState = { bRev: 2000000, sRev: 3000000, exp: 500000, socialIns: 500000, otherDed: 0 };
         let simInitialized = false;
+        let isAutoSync = true; // ▼ AI目安自動連動フラグ
+
+        function toggleAutoSync() {
+            isAutoSync = !isAutoSync;
+            updateToggleUI();
+            if (isAutoSync) autoCalculateEstimates();
+        }
+
+        function updateToggleUI() {
+            const bg = document.getElementById('auto-sync-toggle');
+            const knob = document.getElementById('auto-sync-knob');
+            const expBadge = document.getElementById('sim-exp-badge');
+            const socBadge = document.getElementById('sim-soc-badge');
+
+            if (isAutoSync) {
+                bg.classList.replace('bg-slate-300', 'bg-indigo-500');
+                knob.classList.add('translate-x-6');
+                expBadge.classList.add('hidden');
+                socBadge.classList.add('hidden');
+            } else {
+                bg.classList.replace('bg-indigo-500', 'bg-slate-300');
+                knob.classList.remove('translate-x-6');
+                expBadge.classList.remove('hidden');
+                socBadge.classList.remove('hidden');
+            }
+        }
+
+        // ▼ 売上に連動して経費・社保の目安を自動セットする関数
+        function autoCalculateEstimates() {
+            if (!isAutoSync) return;
+
+            // 1. 経費の目安（過去実績から約20%とする）
+            const expRate = 0.20; 
+            simState.exp = Math.round((simState.bRev * expRate) / 10000) * 10000;
+
+            // 2. 社会保険料の目安（簡易計算）
+            let sIncome = 0;
+            let sRev = simState.sRev;
+            if (sRev <= 1625000) sIncome = Math.max(0, sRev - 550000);
+            else if (sRev <= 1800000) sIncome = sRev - (sRev * 0.4 - 100000);
+            else if (sRev <= 3600000) sIncome = sRev - (sRev * 0.3 + 80000);
+            else if (sRev <= 6600000) sIncome = sRev - (sRev * 0.2 + 440000);
+            else if (sRev <= 8500000) sIncome = sRev - (sRev * 0.1 + 1100000);
+            else sIncome = sRev - 1950000;
+            sIncome = Math.max(0, sIncome);
+
+            let bIncome = Math.max(0, simState.bRev - simState.exp - 650000);
+            let totalInc = sIncome + bIncome;
+
+            if (totalInc > 0) {
+                // 所得の約10% ＋ 均等割等約15万円として計算
+                simState.socialIns = Math.round(((Math.max(0, totalInc - 430000) * 0.1) + 150000) / 10000) * 10000;
+                // ただし売上規模が小さい場合は頭打ちにする
+                if(simState.socialIns > totalInc * 0.3) simState.socialIns = Math.round((totalInc * 0.2) / 10000) * 10000;
+            } else {
+                simState.socialIns = 50000; // 最低限
+            }
+
+            updateSimUIValues();
+            calcSim();
+        }
 
         function initSimulator() {
             if (!simInitialized) {
                 const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
                 if (years.length > 0) {
                     const latest = pastData[years[0]];
-                    simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns };
+                    simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns, otherDed: 0 };
                     document.getElementById('sim-copy-btn').classList.remove('hidden');
                     document.getElementById('sim-copy-text').innerText = `最新の実績(${latest.year.split(' ')[0]})をセット`;
                 }
@@ -529,19 +655,40 @@
             const years = Object.keys(pastData).map(Number).sort((a,b)=>b-a);
             if (years.length > 0) {
                 const latest = pastData[years[0]];
-                simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns };
+                simState = { bRev: latest.businessRev, sRev: latest.salaryRev, exp: latest.expenses, socialIns: latest.socialIns, otherDed: 0 };
+                
+                // コピー時は実測値を優先するため自動連動をOFFにする
+                if (isAutoSync) toggleAutoSync();
+                
                 updateSimUIValues();
                 calcSim();
             }
         }
 
-        function syncSim(field, valStr) {
+        // ▼ 値の同期（手動操作時はisManual = true）
+        function syncSim(field, valStr, isManual = false) {
             const value = Number(valStr) || 0;
             simState[field] = value;
+            
             if(field === 'bRev') {
                 const expRange = document.getElementById('sim-exp-range');
                 expRange.max = value || 1000000;
             }
+
+            if (isManual) {
+                // 経費や社保を手動で動かした場合は、自動連動をOFFにする
+                if (field === 'exp' || field === 'socialIns') {
+                    if (isAutoSync) toggleAutoSync();
+                }
+                // 売上を変更し、自動連動ONなら目安を再計算
+                if (field === 'bRev' || field === 'sRev') {
+                    if (isAutoSync) {
+                        autoCalculateEstimates();
+                        return; // 内部で calcSim が呼ばれるため抜ける
+                    }
+                }
+            }
+
             updateSimUIValues();
             calcSim();
         }
@@ -551,6 +698,7 @@
                 document.getElementById(`sim-${k}-num`).value = simState[k];
                 document.getElementById(`sim-${k}-range`).value = simState[k];
             });
+            document.getElementById('sim-otherDed-num').value = simState.otherDed || '';
             document.getElementById('sim-exp-range').max = simState.bRev || 1000000;
             
             const expRatio = simState.bRev > 0 ? ((simState.exp / simState.bRev) * 100).toFixed(1) : 0;
@@ -558,9 +706,8 @@
         }
 
         function calcSim() {
-            const { bRev, sRev, exp, socialIns } = simState;
+            const { bRev, sRev, exp, socialIns, otherDed } = simState;
             
-            // 給与所得
             let salaryIncome = 0;
             if (sRev <= 1625000) salaryIncome = sRev - 550000;
             else if (sRev <= 1800000) salaryIncome = sRev - (sRev * 0.4 - 100000);
@@ -570,15 +717,17 @@
             else salaryIncome = sRev - 1950000;
             salaryIncome = Math.max(0, salaryIncome);
 
-            // 事業所得 (青色65万控除)
-            const businessIncome = Math.max(0, bRev - exp - 650000);
+            // 事業所得 (青色65万控除前)
+            const bIncomeRaw = Math.max(0, bRev - exp);
+            const businessIncome = Math.max(0, bIncomeRaw - 650000);
             const totalIncome = salaryIncome + businessIncome;
 
-            // 課税所得
-            let taxableIncome = Math.max(0, totalIncome - (480000 + socialIns));
+            // 課税所得 (基礎48万 + 社保 + その他の控除)
+            const basicDeduction = 480000;
+            const totalDeductions = basicDeduction + socialIns + otherDed;
+            let taxableIncome = Math.max(0, totalIncome - totalDeductions);
             taxableIncome = Math.floor(taxableIncome / 1000) * 1000;
 
-            // 所得税
             let incomeTax = 0;
             if (taxableIncome <= 1950000) incomeTax = taxableIncome * 0.05;
             else if (taxableIncome <= 3300000) incomeTax = taxableIncome * 0.10 - 97500;
@@ -590,8 +739,7 @@
             
             const totalIncomeTax = Math.floor((incomeTax * 1.021) / 100) * 100;
             
-            // 住民税
-            let resTaxable = Math.max(0, totalIncome - (socialIns + 430000));
+            let resTaxable = Math.max(0, totalIncome - (socialIns + otherDed + 430000));
             resTaxable = Math.floor(resTaxable / 1000) * 1000;
             const residentTax = Math.floor(resTaxable * 0.10) + 5000;
 
@@ -599,7 +747,6 @@
             const totalRevenue = bRev + sRev;
             const netIncome = totalRevenue - exp - socialIns - totalTaxes;
 
-            // DOMへ反映
             document.getElementById('res-netIncome').innerText = formatCurrency(netIncome);
             document.getElementById('res-totalRevenue').innerText = formatCurrency(totalRevenue);
             document.getElementById('res-totalTaxes').innerText = formatCurrency(totalTaxes);
@@ -610,7 +757,14 @@
             document.getElementById('res-incomeTax').innerText = formatCurrency(totalIncomeTax);
             document.getElementById('res-residentTax').innerText = formatCurrency(residentTax);
 
-            // グラフ更新
+            // 任意控除の表示制御
+            if (otherDed > 0) {
+                document.getElementById('res-otherDed-row').classList.remove('hidden');
+                document.getElementById('res-otherDed-val').innerText = `-${formatCurrency(otherDed)}`;
+            } else {
+                document.getElementById('res-otherDed-row').classList.add('hidden');
+            }
+
             const getPct = (val) => totalRevenue > 0 ? ((val / totalRevenue) * 100).toFixed(1) : 0;
             const netPct = Math.max(0, getPct(netIncome));
             const expPct = getPct(exp);
